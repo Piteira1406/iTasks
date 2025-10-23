@@ -44,4 +44,4 @@ class ScrollFrostAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
     );
   }
-}
+}\
