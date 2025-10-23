@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class typetask{
+class TaskType{
   final String id;
   final String name;
 
-  typetask({
+  TaskType({
     required this.id,
     required this.name,
   });
@@ -15,9 +15,9 @@ class typetask{
     };
   }
 
-  factory typetask.fromFirestore(DocumentSnapshot doc) {
+  factory TaskType.fromFirestore(DocumentSnapshot doc) {
     final map = doc.data() as Map<String, dynamic>;
-    return typetask(
+    return TaskType(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
     );

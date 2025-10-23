@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class task{
+class Task{
   final String id;
   final String description;
   final String taskStatus;
@@ -18,7 +18,7 @@ class task{
   final String idDeveloper;
   final String idTaskType;
 
-  task({
+  Task({
     required this.id,
     required this.description,
     required this.taskStatus,
@@ -53,9 +53,9 @@ class task{
   }
 
 
-  factory task.fromFirestore(DocumentSnapshot doc) {
+  factory Task.fromFirestore(DocumentSnapshot doc) {
     final map = doc.data() as Map<String, dynamic>;
-    return task(
+    return Task(
       id: map['id'] ?? '',
       description: map['description'] ?? '',
       taskStatus: map['taskStatus'] ?? '',
