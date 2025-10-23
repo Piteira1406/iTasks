@@ -1,11 +1,11 @@
 // features/auth/widgets/login_form.dart
 
 import 'package:flutter/material.dart';
-import '../../../core/widgets/custom_button.dart';
-import '../../../core/widgets/custom_textfield.dart';
-import '../../../core/widgets/glass_card.dart'; // O seu widget de Glassmorphism
-import '../../../core/widgets/loading_spinner.dart';
-import '../../../features/auth/providers/login_provider.dart';
+import 'package:itasks/core/widgets/custom_button.dart';
+import 'package:itasks/core/widgets/custom_text_field.dart';
+import 'package:itasks/core/widgets/glass_card.dart'; // O seu widget de Glassmorphism
+import 'package:itasks/core/widgets/loading_spinner.dart';
+import 'package:itasks/features/auth/providers/login_provider.dart';
 import 'package:provider/provider.dart';
 // Imports relativos para os widgets do core
 

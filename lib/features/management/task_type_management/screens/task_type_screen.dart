@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 // (Use o nome do seu projeto no pubspec.yaml, ex: 'itasks')
 import 'package:itasks/core/widgets/glass_card.dart';
 // Importe o widget de diálogo que vamos criar a seguir
-import 'package:itasks/features/management/task_type_management/widgets/task_type_dialog.dart';
+import 'package:itasks/features/management/task_type_management/widgets/task_type_dialogue.dart';
 
 class TaskTypeScreen extends StatelessWidget {
   const TaskTypeScreen({super.key});

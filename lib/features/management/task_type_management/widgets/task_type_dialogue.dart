@@ -3,7 +3,8 @@
 import 'package:flutter/material.dart';
 // Importe os seus widgets visuais
 import 'package:itasks/core/widgets/glass_card.dart';
-import 'package:itasks/core/widgets/custom_textfield.dart';
+import 'package:itasks/core/widgets/custom_text_field.dart';
+import 'package:itasks/core/widgets/custom_button.dart';
 // TODO: Quando o modelo estiver pronto, importe-o
 // import 'package:itasks/core/models/task_type_model.dart';
 

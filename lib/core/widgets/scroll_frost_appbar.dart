@@ -9,11 +9,7 @@ class ScrollFrostAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
 
-  const ScrollFrostAppBar({
-    super.key,
-    required this.title,
-    this.actions,
-  });
+  const ScrollFrostAppBar({super.key, required this.title, this.actions});
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -21,8 +17,8 @@ class ScrollFrostAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    final surfaceColor = isDark 
-        ? AppColors.darkBackground.withOpacity(0.7) 
+    final surfaceColor = isDark
+        ? AppColors.darkBackground.withOpacity(0.7)
         : Colors.white.withOpacity(0.7);
 
     return ClipRect(
@@ -44,4 +40,4 @@ class ScrollFrostAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
     );
   }
-}\
+}

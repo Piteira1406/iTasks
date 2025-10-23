@@ -52,9 +52,9 @@ class iTasksApp extends StatelessWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode, // <--- Aplica o tema atual
 
-      home: TaskTypeScreen() /*authProvider.isLoggedIn
+      home: authProvider.isLoggedIn
           ? const KanbanScreen()
-          : const LoginScreen(),*/, // ... (Rotas)
+          : const LoginScreen(), // ... (Rotas)
     );
   }
 }
