@@ -4,13 +4,13 @@ class Manager {
   final String id;
   final String name;
   final String department;
-  final String iduser;
+  final String idUser;
 
   Manager({
     required this.id,
     required this.name,
     required this.department,
-    required this.iduser,
+    required this.idUser,
   });
 
   Map<String, dynamic> toMap() {
@@ -18,7 +18,7 @@ class Manager {
       'id': id,
       'name': name,
       'department': department,
-      'iduser': iduser,
+      'idUser': idUser,
     };
   }
 
@@ -28,7 +28,7 @@ class Manager {
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       department: map['department'] ?? '',
-      iduser: map['iduser'] ?? '',
+      idUser: map['idUser'] ?? '',
     );
   }
 }
