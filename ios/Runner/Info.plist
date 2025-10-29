@@ -29,6 +29,10 @@
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UISupportedInterfaceOrientations</key>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>A aplicação precisa de acesso para guardar e partilhar relatórios CSV.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>A aplicação precisa de acesso para guardar e partilhar relatórios CSV.</string>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>

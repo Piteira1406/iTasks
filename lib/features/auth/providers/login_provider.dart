@@ -2,14 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:itasks/core/services/auth_service.dart';
-import 'package:itasks/core/providers/auth_provider.dart';
-import 'package:itasks/core/models/app_user_model.dart'; // Importe o modelo base
 
 enum LoginState { idle, loading, error }
 
 class LoginProvider extends ChangeNotifier {
   final AuthService _authService;
-  final AuthProvider _authProvider;
 
   LoginState _state = LoginState.idle;
   LoginState get state => _state;
@@ -17,39 +14,36 @@ class LoginProvider extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
-  // O LoginProvider precisa dos serviços core para funcionar
-  LoginProvider({
-    required AuthService authService,
-    required AuthProvider authProvider,
-  }) : _authService = authService,
-       _authProvider = authProvider;
+  // O LoginProvider precisa do AuthService para funcionar
+  LoginProvider({required AuthService authService})
+    : _authService = authService;
 
   // Função principal chamada pelo botão de login
   Future<bool> login(String email, String password) async {
     _setState(LoginState.loading);
 
     try {
-      // 1. Chamar o serviço de autenticação (que o seu colega está a fazer)
-      // Este serviço deve lidar com o Firebase Auth E com o Firestore
-      // para ir buscar os dados do Manager/Developer.
-      AppUser? user = await _authService.loginWithEmailAndPassword(
-        email,
-        password,
+      // 1. Chamar o serviço de autenticação do Firebase
+      final userCredential = await _authService.signInWithEmail(
+        email: email,
+        password: password,
       );
 
-      if (user != null) {
-        // 2. Se o login for bem-sucedido, informar o AuthProvider global
-        _authProvider.setUser(user);
+      if (userCredential != null && userCredential.user != null) {
+        // 2. O AuthProvider irá automaticamente detectar a mudança de estado
+        // através do authStateChanges.listen() e buscar os dados do Firestore
+        // Não é necessário chamar _authProvider.setUser()
+
         _setState(LoginState.idle);
         return true; // Sucesso
       } else {
-        // Caso em que o authService retorna nulo por alguma razão (ex: user não encontrado no firestore)
-        _setError('Utilizador não encontrado.');
+        // Login falhou (credenciais inválidas)
+        _setError('Email ou password incorretos.');
         return false; // Falha
       }
     } catch (e) {
-      // 3. Se houver um erro (ex: password errada), capturar e mostrar
-      _setError(e.toString());
+      // 3. Se houver um erro, capturar e mostrar
+      _setError('Erro ao fazer login: ${e.toString()}');
       return false; // Falha
     }
   }
