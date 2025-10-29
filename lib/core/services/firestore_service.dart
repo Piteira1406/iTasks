@@ -8,9 +8,9 @@ import 'package:itasks/core/models/task_type_model.dart';
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-//USERS
+  //USERS
 
-  Future<void> createUtilizador(User user, String uid)async {
+  Future<void> createUtilizador(AppUser user, String uid) async {
     await _db.collection('Utilizador').doc(uid).set(user.toMap());
   }
 
@@ -22,10 +22,10 @@ class FirestoreService {
     await _db.collection('Developer').add(developer.toMap());
   }
 
-  Future<User?> getUtilizadorById(String uid) async {
+  Future<AppUser?> getUtilizadorById(String uid) async {
     final doc = await _db.collection('Utilizador').doc(uid).get();
     if (doc.exists) {
-      return User.fromFirestore(doc);
+      return AppUser.fromFirestore(doc);
     }
     return null;
   }
@@ -51,24 +51,21 @@ class FirestoreService {
       'taskStatus': newState,
       if (newState == 'Doing') 'realStartDate': Timestamp.now(),
       if (newState == 'Done') 'realEndDate': Timestamp.now(),
-      });
+    });
   }
 
   //TODO: Add here methods for getting tasks by developer, by manager, by status, etc.
 
-//TASK TYPES
+  //TASK TYPES
   Future<void> createTaskType(TaskType taskType) async {
     await _db.collection('TaskType').add(taskType.toMap());
   }
 
   Stream<List<TaskType>> getTaskTypesStream() {
-    return _db.collection('TaskType').snapshots().map((snapshot){
-      return snapshot.docs
-          .map((doc) => TaskType.fromFirestore(doc))
-          .toList();
+    return _db.collection('TaskType').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => TaskType.fromFirestore(doc)).toList();
     });
   }
-  
-//TODO: Add here methods Update and delete for task types.
 
+  //TODO: Add here methods Update and delete for task types.
 }

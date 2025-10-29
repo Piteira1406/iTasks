@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class User{
+class AppUser{
   final String id;
   final String name;
   final String username;
@@ -8,7 +8,7 @@ class User{
   final String email;
 
 
-User({
+AppUser({
   required this.id,
   required this.name,
   required this.username,
@@ -26,9 +26,9 @@ User({
     };
   }
 
-  factory User.fromFirestore(DocumentSnapshot doc) {
+  factory AppUser.fromFirestore(DocumentSnapshot doc) {
     final map = doc.data() as Map<String, dynamic>;
-    return User(
+    return AppUser(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       username: map['username'] ?? '',
