@@ -40,8 +40,11 @@ class DeveloperCompletedTasksScreen extends StatelessWidget {
         itemCount: mockCompletedTasks.length,
         itemBuilder: (context, index) {
           final task = mockCompletedTasks[index];
-          // Calcular o tempo de execução (Req 1.121) 
-          final duration = _calculateDuration(task['startDate'], task['endDate']);
+          // Calcular o tempo de execução (Req 1.121)
+          final duration = _calculateDuration(
+            task['startDate'],
+            task['endDate'],
+          );
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
@@ -69,7 +72,7 @@ class DeveloperCompletedTasksScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Tempo de Execução (Req 1.121)
                     _buildInfoRow(
                       context,
@@ -81,17 +84,21 @@ class DeveloperCompletedTasksScreen extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
-  }
+  } // <--- FIM DO MÉTODO build
 
-  // Helper para calcular o tempo de execução em dias 
+  //
+  // --- AS FUNÇÕES HELPER COMEÇAM AQUI (FORA DO build) ---
+  //
+
+  // Helper para calcular o tempo de execução em dias
   String _calculateDuration(DateTime startDate, DateTime endDate) {
     // Adicionamos +1 para incluir o dia de início (ex: 1 a 3 de Outubro = 3 dias)
     final differenceInDays = endDate.difference(startDate).inDays + 1;
-    
+
     if (differenceInDays == 1) {
       return '1 dia';
     }
@@ -99,15 +106,17 @@ class DeveloperCompletedTasksScreen extends StatelessWidget {
   }
 
   // Helper para mostrar uma linha de informação
-  Widget _buildInfoRow(BuildContext context, {required IconData icon, required String label, required String value}) {
+  Widget _buildInfoRow(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
     return Row(
       children: [
         Icon(icon, size: 16, color: Colors.white70),
         const SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(color: Colors.white70, fontSize: 14),
-        ),
+        Text(label, style: TextStyle(color: Colors.white70, fontSize: 14)),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -123,4 +132,4 @@ class DeveloperCompletedTasksScreen extends StatelessWidget {
       ],
     );
   }
-}
+} // <--- FIM DA CLASSE DeveloperCompletedTasksScreen

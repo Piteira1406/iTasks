@@ -6,6 +6,16 @@ import 'package:itasks/features/kanban/widgets/kanban_column_widget.dart';
 import 'package:itasks/features/kanban/screens/task_details_screen.dart';
 // (Opcional) import 'package:itasks/core/widgets/scroll_frost_appbar.dart';
 
+// --- Imports para o Menu de Teste ---
+// (Use o nome do seu projeto, ex: 'itasks')
+import 'package:itasks/features/auth/screens/login_screen.dart';
+import 'package:itasks/features/management/task_type_management/screens/task_type_screen.dart';
+import 'package:itasks/features/management/user_management/screens/user_list_screen.dart';
+import 'package:itasks/features/reports/screens/manager_ongoing_tasks_screen.dart';
+import 'package:itasks/features/reports/screens/manager_completed_task_screen.dart'; // Corrigi o 'tasks'
+import 'package:itasks/features/reports/screens/developer_completed_tasks_screen.dart';
+// --- Fim dos Imports de Teste ---
+
 class KanbanScreen extends StatefulWidget {
   const KanbanScreen({super.key});
 
@@ -68,6 +78,16 @@ class _KanbanScreenState extends State<KanbanScreen> {
     );
   }
 
+  // --- INÍCIO: Helper para o Menu de Teste ---
+  // Helper temporário para navegar
+  void _navigateTo(BuildContext context, Widget screen) {
+    // Fecha o Drawer antes de navegar
+    Navigator.of(context).pop();
+    // Navega para o novo ecrã
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen));
+  }
+  // --- FIM: Helper para o Menu de Teste ---
+
   @override
   Widget build(BuildContext context) {
     // Usamos o PageController para permitir 'swipe' entre colunas
@@ -90,6 +110,113 @@ class _KanbanScreenState extends State<KanbanScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
+
+      // --- INÍCIO DO CÓDIGO DE TESTE (Drawer) ---
+      // Adiciona esta propriedade 'drawer'
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const UserAccountsDrawerHeader(
+              accountName: Text("Menu de Teste de UI"),
+              accountEmail: Text("Navegação Rápida"),
+              currentAccountPicture: CircleAvatar(child: Icon(Icons.build)),
+            ),
+
+            // --- Ecrãs de Gestão (Gestor) ---
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Text("Gestão (Gestor)"),
+            ),
+            ListTile(
+              leading: Icon(Icons.label),
+              title: Text("Gestão: Tipos de Tarefa"),
+              onTap: () => _navigateTo(context, const TaskTypeScreen()),
+            ),
+            ListTile(
+              leading: Icon(Icons.people),
+              title: Text("Gestão: Lista de Utilizadores"),
+              onTap: () => _navigateTo(context, const UserListScreen()),
+            ),
+
+            // --- Ecrãs Kanban (Teste de Modos) ---
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Text("Kanban (Teste de Modos)"),
+            ),
+            ListTile(
+              leading: Icon(Icons.add_task),
+              title: Text("Kanban: Criar Tarefa (Gestor)"),
+              // Abre o ecrã de detalhes em modo "criar"
+              onTap: () => _navigateTo(
+                context,
+                const TaskDetailsScreen(isReadOnly: false, task: null),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.visibility),
+              title: Text("Kanban: Ver Tarefa (Programador)"),
+              // Abre o ecrã de detalhes em modo "ver" com dados falsos
+              onTap: () => _navigateTo(
+                context,
+                TaskDetailsScreen(
+                  isReadOnly: true,
+                  task: {
+                    // Mock de 1 tarefa
+                    'title': 'Tarefa de Teste (Modo Leitura)',
+                    'order': 1,
+                    'devName': 'Programador Teste',
+                    'type': 'Bug',
+                  },
+                ),
+              ),
+            ),
+
+            // --- Ecrãs de Relatórios ---
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Text("Relatórios"),
+            ),
+            ListTile(
+              leading: Icon(Icons.timer),
+              title: Text("Relatório: Em Curso (Gestor)"),
+              onTap: () =>
+                  _navigateTo(context, const ManagerOngoingTasksScreen()),
+            ),
+            ListTile(
+              leading: Icon(Icons.check_circle),
+              title: Text("Relatório: Concluídas (Gestor)"),
+              onTap: () =>
+                  _navigateTo(context, const ManagerCompletedTasksScreen()),
+            ),
+            ListTile(
+              leading: Icon(Icons.check),
+              title: Text("Relatório: Concluídas (Programador)"),
+              onTap: () =>
+                  _navigateTo(context, const DeveloperCompletedTasksScreen()),
+            ),
+
+            // --- Logout ---
+            const Divider(),
+            ListTile(
+              leading: Icon(Icons.logout),
+              title: Text("Voltar ao Login"),
+              onTap: () {
+                // TODO: Chamar context.read<AuthProvider>().logout()
+                // Por agora, apenas substituímos o ecrã:
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+      // --- FIM DO CÓDIGO DE TESTE ---
+
       // O Gestor vê o botão de Adicionar, o Programador não
       floatingActionButton: _isManager
           ? FloatingActionButton(

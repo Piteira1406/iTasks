@@ -17,20 +17,20 @@ class ManagerOngoingTasksScreen extends StatelessWidget {
         'devName': 'Bruno Costa',
         'status': 'ToDo',
         // DataFimPrevista: Daqui a 5 dias
-        'endDate': DateTime.now().add(const Duration(days: 5)), 
+        'endDate': DateTime.now().add(const Duration(days: 5)),
       },
       {
         'title': 'Criar modelos de dados',
         'devName': 'Carla Dias',
         'status': 'Doing',
-         // DataFimPrevista: Há 2 dias atrás (atrasada)
+        // DataFimPrevista: Há 2 dias atrás (atrasada)
         'endDate': DateTime.now().subtract(const Duration(days: 2)),
       },
       {
         'title': 'Corrigir bug no iOS',
         'devName': 'Bruno Costa',
         'status': 'ToDo',
-         // DataFimPrevista: Para hoje
+        // DataFimPrevista: Para hoje
         'endDate': DateTime.now(),
       },
     ];
@@ -71,14 +71,14 @@ class ManagerOngoingTasksScreen extends StatelessWidget {
                         ),
                         Chip(
                           label: Text(task['status']),
-                          backgroundColor: task['status'] == 'Doing' 
-                              ? Colors.orangeAccent.withOpacity(0.5) 
+                          backgroundColor: task['status'] == 'Doing'
+                              ? Colors.orangeAccent.withOpacity(0.5)
                               : Colors.blueAccent.withOpacity(0.5),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Programador
                     _buildInfoRow(
                       context,
@@ -92,7 +92,8 @@ class ManagerOngoingTasksScreen extends StatelessWidget {
                     _buildInfoRow(
                       context,
                       icon: Icons.timer_outlined,
-                      label: timeDifference['label'], // "Tempo em Falta:" ou "Atraso:"
+                      label:
+                          timeDifference['label'], // "Tempo em Falta:" ou "Atraso:"
                       value: timeDifference['value'], // "5 dias" ou "2 dias"
                       valueColor: timeDifference['color'], // Verde ou Vermelho
                     ),
@@ -100,19 +101,23 @@ class ManagerOngoingTasksScreen extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        );
-      },
-    );
-  }
+          );
+        }, // <--- Fim do itemBuilder
+      ), // <--- Fim do ListView.builder (e do 'body')
+    ); // <--- CORREÇÃO: Fim do Scaffold (com ); )
+  } // <--- Fim do MÉTODO build
 
-  // Helper para calcular o tempo em falta/atraso (Req 1.123) 
+  //
+  // --- AS FUNÇÕES HELPER COMEÇAM AQUI (FORA DO build) ---
+  //
+
+  // Helper para calcular o tempo em falta/atraso (Req 1.123)
   Map<String, dynamic> _calculateTimeDifference(DateTime endDate) {
     final now = DateTime.now();
     // Normalizamos as datas para ignorar as horas
     final today = DateTime(now.year, now.month, now.day);
     final targetDate = DateTime(endDate.year, endDate.month, endDate.day);
-    
+
     final differenceInDays = targetDate.difference(today).inDays;
 
     if (differenceInDays < 0) {
@@ -137,15 +142,18 @@ class ManagerOngoingTasksScreen extends StatelessWidget {
   }
 
   // Helper para mostrar uma linha de informação
-  Widget _buildInfoRow(BuildContext context, {required IconData icon, required String label, required String value, Color? valueColor}) {
+  Widget _buildInfoRow(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+  }) {
     return Row(
       children: [
         Icon(icon, size: 16, color: Colors.white70),
         const SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(color: Colors.white70, fontSize: 14),
-        ),
+        Text(label, style: TextStyle(color: Colors.white70, fontSize: 14)),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -161,4 +169,4 @@ class ManagerOngoingTasksScreen extends StatelessWidget {
       ],
     );
   }
-}
+} // <--- Fim da CLASSE ManagerOngoingTasksScreen
