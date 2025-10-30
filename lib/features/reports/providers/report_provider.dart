@@ -49,15 +49,80 @@ class ReportProvider with ChangeNotifier {
   }
 
   Future<void> exportCompletedTasksToCsv(String managerId) async {
-    // 1. Buscar os dados (se ainda não os tiver)
+    // 1. Buscar os dados das tarefas concluídas
     if (_completedTasksManager.isEmpty) {
       await fetchManagerReports(managerId);
     }
 
-    // 2. TODO: Buscar dados relacionados (Nome do Developer, Nome do TaskType)
-    // O CSVService precisará dos nomes, não dos IDs
+    // 2. BUSCAR DADOS RELACIONADOS (TODO: implementar no FirestoreService)
+    // List<AppUser> allDevelopers = await _firestoreService.getAllDevelopers();
+    // List<TaskType> allTaskTypes = await _firestoreService.getAllTaskTypes();
 
-    // 3. Passar os dados formatados para o CsvService
-    // await _csvService.generateManagerCsv(_completedTasksManager);
+    // 3. Formatar os dados para a lista de listas
+    List<List<dynamic>> rows = [];
+
+    // 3.1. Adicionar Cabeçalhos
+    rows.add([
+      "Description",
+      "Developer", // Nome, não ID
+      "TaskType", // Nome, não ID
+      "Planned Start Date",
+      "Planned End Date",
+      "Real Start Date",
+      "Real End Date",
+      "Planned Time (days)",
+      "Real Time (days)",
+    ]);
+
+    // 3.2. Adicionar dados de cada tarefa
+    for (var task in _completedTasksManager) {
+      // Lógica para encontrar nomes a partir dos IDs
+      // String developerName = allDevelopers.firstWhere((d) => d.id == task.idDeveloper, orElse: () => null)?.name ?? 'N/A';
+      // String taskTypeName = allTaskTypes.firstWhere((t) => t.id == task.idTaskType, orElse: () => null)?.name ?? 'N/A';
+
+      // Lógica de cálculo de datas
+      final plannedDays = task.previsionEndDate
+          .toDate()
+          .difference(task.previsionStartDate.toDate())
+          .inDays;
+
+      // Verifica se as datas reais são válidas (não são placeholders)
+      final hasRealDates =
+          task.realStartDate.toDate().year > 1970 &&
+          task.realEndDate.toDate().year > 1970;
+      final realDays = hasRealDates
+          ? task.realEndDate
+                .toDate()
+                .difference(task.realStartDate.toDate())
+                .inDays
+          : 0;
+
+      rows.add([
+        task.description,
+        // developerName, // Usar o nome quando implementar
+        // taskTypeName, // Usar o nome quando implementar
+        task.idDeveloper, // Temporário: mostrar ID até implementar busca de nomes
+        task.idTaskType, // Temporário: mostrar ID até implementar busca de nomes
+        task.previsionStartDate.toDate().toLocal().toString().split(
+          ' ',
+        )[0], // Formatar data
+        task.previsionEndDate.toDate().toLocal().toString().split(' ')[0],
+        hasRealDates
+            ? task.realStartDate.toDate().toLocal().toString().split(' ')[0]
+            : 'N/A',
+        hasRealDates
+            ? task.realEndDate.toDate().toLocal().toString().split(' ')[0]
+            : 'N/A',
+        plannedDays,
+        realDays,
+      ]);
+    }
+
+    // 4. Chamar o CsvService
+    try {
+      await _csvService.generateAndShareCsv(rows, "Report_Completed_Tasks.csv");
+    } catch (e) {
+      print("Export error: $e");
+    }
   }
 }
