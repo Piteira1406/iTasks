@@ -1,0 +1,53 @@
+type User @table {
+  username: String!
+  email: String!
+  createdAt: Timestamp!
+  displayName: String
+  photoUrl: String
+}
+
+type Project @table {
+  name: String!
+  methodology: String!
+  createdAt: Timestamp!
+  description: String
+  creator: User
+}
+
+type Board @table {
+  name: String!
+  createdAt: Timestamp!
+  description: String
+  customColumns: String # JSON array of column names stored as a string
+  project: Project
+}
+
+type Task @table {
+  title: String!
+  status: String!
+  createdAt: Timestamp!
+  description: String
+  dueDate: Date
+  priority: String
+  board: Board
+  assignedTo: User
+  project: Project
+  sprint: Sprint
+}
+
+type Sprint @table {
+  name: String!
+  startDate: Date!
+  endDate: Date!
+  status: String!
+  createdAt: Timestamp!
+  goal: String
+  project: Project
+}
+
+type Comment @table {
+  content: String!
+  createdAt: Timestamp!
+  task: Task
+  author: User
+}
