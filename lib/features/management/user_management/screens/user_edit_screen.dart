@@ -112,10 +112,12 @@ class _UserEditScreenState extends State<UserEditScreen> {
                 obscureText: true,
                 validator: (val) {
                   if (!_isEditing && val!.isEmpty) return 'Campo obrigatório';
-                  if (_isEditing && val!.isNotEmpty && val.length < 6)
+                  if (_isEditing && val!.isNotEmpty && val.length < 6) {
                     return 'Mínimo 6 caracteres';
-                  if (!_isEditing && val!.length < 6)
+                  }
+                  if (!_isEditing && val!.length < 6) {
                     return 'Mínimo 6 caracteres';
+                  }
                   return null;
                 },
                 // Nota: No modo de edição, a password pode ser opcional
@@ -143,7 +145,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
   // Widget para o seletor de Role (Programador/Gestor)
   Widget _buildRoleSelector() {
     return DropdownButtonFormField<UserRole>(
-      value: _selectedRole,
+      initialValue: _selectedRole,
       decoration: InputDecoration(
         labelText: 'Função',
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -178,7 +180,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
 
     return [
       DropdownButtonFormField<NivelExperiencia>(
-        value: _selectedNivel,
+        initialValue: _selectedNivel,
         decoration: InputDecoration(
           labelText: 'Nível de Experiência',
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -198,7 +200,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
       ),
       const SizedBox(height: 16),
       DropdownButtonFormField<String>(
-        value: _selectedManagerId,
+        initialValue: _selectedManagerId,
         hint: Text('Selecionar Gestor'),
         decoration: InputDecoration(
           labelText: 'Gestor Responsável',
@@ -223,7 +225,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
   List<Widget> _buildManagerFields() {
     return [
       DropdownButtonFormField<Departamento>(
-        value: _selectedDepartamento,
+        initialValue: _selectedDepartamento,
         decoration: InputDecoration(
           labelText: 'Departamento',
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

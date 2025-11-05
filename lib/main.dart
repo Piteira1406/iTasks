@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 // --- CORE ---
 // Serviços
@@ -31,10 +32,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 2. Inicializar o Firebase (OBRIGATÓRIO)
-  await Firebase.initializeApp(
-    // Se estiver a usar o FlutterFire CLI, descomente a linha abaixo
-    // options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // 3. Instanciar os seus serviços (singletons)
   final AuthService authService = AuthService();
@@ -50,6 +48,8 @@ Future<void> main() async {
           create: (_) => AuthProvider(authService, firestoreService),
         ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+
+        Provider<AuthService>(create: (_) => authService),
 
         // --- PROVIDERS DAS FEATURES ---
         ChangeNotifierProvider(create: (_) => KanbanProvider(firestoreService)),

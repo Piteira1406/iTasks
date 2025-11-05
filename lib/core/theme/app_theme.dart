@@ -35,10 +35,8 @@ class AppTheme {
     colorScheme: const ColorScheme.light(
       primary: _AppColors.primaryBlue,
       secondary: _AppColors.lightBackground,
-      background: _AppColors.lightBackground,
       surface: Colors.white, // Cor dos 'Cards'
-      onPrimary: Colors.white, // Texto num botão primário
-      onBackground: Colors.black, // Texto no fundo
+      onPrimary: Colors.white, // Texto no fundo
       onSurface: Colors.black, // Texto nos 'Cards'
       error: Colors.redAccent,
     ),
@@ -68,10 +66,8 @@ class AppTheme {
     colorScheme: const ColorScheme.dark(
       primary: _AppColors.primaryBlue,
       secondary: _AppColors.darkSurface,
-      background: _AppColors.darkBackground,
       surface: _AppColors.darkSurface, // Cor dos 'Cards'
       onPrimary: Colors.white,
-      onBackground: Colors.white,
       onSurface: Colors.white,
       error: Colors.redAccent,
     ),

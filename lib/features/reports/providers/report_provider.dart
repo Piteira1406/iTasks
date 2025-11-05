@@ -11,9 +11,9 @@ class ReportProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   // Listas para os diferentes relatórios
-  List<Task> _completedTasksManager = [];
-  List<Task> _ongoingTasksManager = [];
-  List<Task> _completedTasksDeveloper = [];
+  final List<Task> _completedTasksManager = [];
+  final List<Task> _ongoingTasksManager = [];
+  final List<Task> _completedTasksDeveloper = [];
 
   List<Task> get completedTasksManager => _completedTasksManager;
   List<Task> get ongoingTasksManager => _ongoingTasksManager;

@@ -9,7 +9,7 @@ class UserManagementProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
   final AuthService _authService;
 
-  List<AppUser> _users = [];
+  final List<AppUser> _users = [];
   bool _isLoading = false;
 
   List<AppUser> get users => _users;
