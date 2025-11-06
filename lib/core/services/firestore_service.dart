@@ -1,8 +1,10 @@
+// lib/core/services/firestore_service.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:itasks/core/models/app_user_model.dart';
 import 'package:itasks/core/models/developer_model.dart';
 import 'package:itasks/core/models/manager_model.dart';
-import 'package:itasks/core/models/task_model.dart';
+import 'package:itasks/core/models/task_model.dart'; // <-- Corrigido para TaskModel
 import 'package:itasks/core/models/task_type_model.dart';
 
 class FirestoreService {
@@ -30,8 +32,6 @@ class FirestoreService {
     return null;
   }
 
-  //TODO: Add here methods Update and delete for users (like the business rule of manager)
-
   //TASKS
 
   Future<void> createTask(Task task) async {
@@ -57,15 +57,28 @@ class FirestoreService {
   //TODO: Add here methods for getting tasks by developer, by manager, by status, etc.
 
   //TASK TYPES
-  Future<void> createTaskType(TaskType taskType) async {
+  Future<void> createTaskType(TaskTypeModel taskType) async {
+    // .add() cria um ID automático
     await _db.collection('TaskType').add(taskType.toMap());
   }
 
-  Stream<List<TaskType>> getTaskTypesStream() {
+  Stream<List<TaskTypeModel>> getTaskTypesStream() {
     return _db.collection('TaskType').snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => TaskType.fromFirestore(doc)).toList();
+      return snapshot.docs
+          .map((doc) => TaskTypeModel.fromFirestore(doc))
+          .toList();
     });
   }
 
-  //TODO: Add here methods Update and delete for task types.
+  // --- MÉTODO 'updateTaskType' ADICIONADO ---
+  // (Corrige o erro 'updateTaskTypeModel isn't defined')
+  Future<void> updateTaskType(TaskTypeModel taskType) async {
+    // Usa o ID do modelo para saber qual documento atualizar
+    await _db.collection('TaskType').doc(taskType.id).update(taskType.toMap());
+  }
+
+  // --- MÉTODO 'deleteTaskType' ADICIONADO ---
+  Future<void> deleteTaskType(String taskTypeId) async {
+    await _db.collection('TaskType').doc(taskTypeId).delete();
+  }
 }

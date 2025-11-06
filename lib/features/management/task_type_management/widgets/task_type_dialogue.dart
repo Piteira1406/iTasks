@@ -5,15 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:itasks/core/widgets/glass_card.dart';
 import 'package:itasks/core/widgets/custom_text_field.dart';
 import 'package:itasks/core/widgets/custom_button.dart';
-// TODO: Quando o modelo estiver pronto, importe-o
-// import 'package:itasks/core/models/task_type_model.dart';
+import 'package:flutter/material.dart';
+import 'package:itasks/core/models/task_type_model.dart';
+import 'package:itasks/core/widgets/loading_spinner.dart';
 
 class TaskTypeDialog extends StatefulWidget {
-  // Se 'taskType' for null, é para criar.
-  // Se for preenchido, é para editar.
-  // final TaskTypeModel? taskType; // TODO: Descomentar quando o modelo existir
-  final dynamic taskType; // Temporário
-
+  // Usa o modelo real. 'null' se for para criar um novo.
+  final TaskTypeModel? taskType;
+  // Função 'onSave' que devolve o nome escrito
   final Function(String name) onSave;
 
   const TaskTypeDialog({super.key, this.taskType, required this.onSave});
@@ -24,15 +23,14 @@ class TaskTypeDialog extends StatefulWidget {
 
 class _TaskTypeDialogState extends State<TaskTypeDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  late TextEditingController _nameController;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // TODO: Descomentar isto quando o modelo estiver pronto
-    // if (widget.taskType != null) {
-    //   _nameController.text = widget.taskType!.name;
-    // }
+    // Se estiver a editar, preenche o campo com o nome antigo
+    _nameController = TextEditingController(text: widget.taskType?.name ?? '');
   }
 
   @override
@@ -41,23 +39,26 @@ class _TaskTypeDialogState extends State<TaskTypeDialog> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
-      widget.onSave(_nameController.text.trim());
+      setState(() => _isLoading = true);
+
+      // Chama a função onSave (que foi passada pelo 'TaskTypeScreen')
+      // e passa-lhe o novo nome
+      await widget.onSave(_nameController.text.trim());
+
+      // (Não precisamos de setState(false) se o widget for fechar)
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Determina se estamos a Criar ou a Editar
     final isEditing = widget.taskType != null;
 
-    // Usamos um AlertDialog com o fundo transparente
-    // para que o nosso GlassCard seja a base.
-    return AlertDialog(
+    return Dialog(
       backgroundColor: Colors.transparent,
-      contentPadding: EdgeInsets.zero,
-      content: GlassCard(
-        // O seu widget de vidro
+      child: GlassCard(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
@@ -67,31 +68,27 @@ class _TaskTypeDialogState extends State<TaskTypeDialog> {
               children: [
                 Text(
                   isEditing ? 'Editar Tipo de Tarefa' : 'Novo Tipo de Tarefa',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 24),
                 CustomTextField(
                   controller: _nameController,
-                  hintText: 'Nome do Tipo (ex: Bug, Feature)',
-                  icon: Icons.label,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'O nome é obrigatório.';
-                    }
-                    return null;
-                  },
+                  hintText: 'Nome (ex: Bug, Feature, Setup)',
+                  icon: Icons.label_outline,
+                  validator: (val) =>
+                      val!.isEmpty ? 'Por favor, insira um nome' : null,
                 ),
                 const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text('Cancelar'),
-                    ),
-                    const SizedBox(width: 8),
-                    CustomButton(text: 'Salvar', onPressed: _submit),
-                  ],
+                if (_isLoading)
+                  const LoadingSpinner()
+                else
+                  CustomButton(
+                    text: isEditing ? 'Salvar Alterações' : 'Criar',
+                    onPressed: _submit,
+                  ),
+                TextButton(
+                  child: const Text('Cancelar'),
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),

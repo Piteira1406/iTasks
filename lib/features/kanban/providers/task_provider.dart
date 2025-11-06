@@ -49,15 +49,11 @@ class TaskDetailsProvider with ChangeNotifier {
       idManager: managerId,
       idDeveloper: _selectedDeveloperId!,
       idTaskType: _selectedTaskTypeId!,
-      creationDate: Timestamp.now(),
-      previsionStartDate: Timestamp.fromDate(_plannedStartDate),
-      previsionEndDate: Timestamp.fromDate(_plannedEndDate),
-      realStartDate: Timestamp.fromDate(
-        DateTime(1970),
-      ), // Placeholder para Timestamp não-nulo
-      realEndDate: Timestamp.fromDate(
-        DateTime(1970),
-      ), // Placeholder para Timestamp não-nulo
+      creationDate: DateTime.now(),
+      previsionStartDate: _plannedStartDate,
+      previsionEndDate: _plannedEndDate,
+      realStartDate: DateTime(1970), // Placeholder para Timestamp não-nulo
+      realEndDate: DateTime(1970), // Placeholder para Timestamp não-nulo
     );
 
     try {
