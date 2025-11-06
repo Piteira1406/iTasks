@@ -1,108 +1,159 @@
 // features/management/task_type_management/screens/task_type_screen.dart
 
 import 'package:flutter/material.dart';
-// Importe os seus widgets visuais
-// (Use o nome do seu projeto no pubspec.yaml, ex: 'itasks')
 import 'package:itasks/core/widgets/glass_card.dart';
-// Importe o widget de diálogo que vamos criar a seguir
+import 'package:itasks/core/widgets/loading_spinner.dart';
 import 'package:itasks/features/management/task_type_management/widgets/task_type_dialogue.dart';
+// --- Imports Novos ---
+import 'package:provider/provider.dart';
+import 'package:itasks/features/management/task_type_management/providers/task_type_provider.dart';
+import 'package:itasks/core/models/task_type_model.dart'; // Modelo real
 
-class TaskTypeScreen extends StatelessWidget {
+class TaskTypeScreen extends StatefulWidget {
   const TaskTypeScreen({super.key});
 
-  void _showEditDialog(BuildContext context) {
+  @override
+  State<TaskTypeScreen> createState() => _TaskTypeScreenState();
+}
+
+class _TaskTypeScreenState extends State<TaskTypeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Pede ao Provider para ir buscar os dados assim que o ecrã é construído
+    // Usamos addPostFrameCallback para garantir que o 'context' está pronto
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Usamos 'context.read' porque não queremos "ouvir" mudanças aqui.
+      // O 'Consumer' no 'build' tratará disso.
+      context.read<TaskTypeProvider>().fetchTaskTypes();
+    });
+  }
+
+  // Função do Pop-up (agora usa o Provider)
+  void _showEditDialog(BuildContext context, {TaskTypeModel? taskType}) {
     showDialog(
       context: context,
-      builder: (context) {
-        // O diálogo é o nosso widget personalizado
+      builder: (dialogContext) {
         return TaskTypeDialog(
-          // TODO: Quando a lógica estiver pronta,
-          // passaremos o 'taskType' para editar.
-          // Por agora, é 'null' para criar um novo.
-          taskType: null,
-          onSave: (name) {
-            // TODO: Chamar o Provider para salvar o novo tipo
-            print("Salvar novo tipo: $name");
-            Navigator.of(context).pop();
+          taskType: taskType, // Passa o tipo de tarefa (null se for para criar)
+          onSave: (name) async {
+            // Usa o Provider para salvar
+            // Usamos 'context.read' porque estamos dentro de uma função
+            final provider = context.read<TaskTypeProvider>();
+            bool success = await provider.saveTaskType(
+              existingTaskType: taskType,
+              name: name,
+            );
+
+            if (success && mounted) {
+              Navigator.of(dialogContext).pop(); // Fecha o pop-up
+            }
+            // Se falhar, o provider vai mostrar um erro (que podemos adicionar à UI)
           },
         );
       },
     );
   }
 
+  // Função de Apagar (agora usa o Provider)
+  void _deleteType(TaskTypeModel taskType) {
+    // TODO: Mostrar um diálogo de confirmação "Tem a certeza?"
+
+    // Usa o Provider para apagar
+    context.read<TaskTypeProvider>().deleteTaskType(taskType.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Pode usar o seu AppBar customizado aqui
       appBar: AppBar(
         title: Text('Gestão de Tipos de Tarefa'),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showEditDialog(context),
+        onPressed: () =>
+            _showEditDialog(context), // Criar novo (taskType: null)
         child: Icon(Icons.add),
       ),
       body:
-          // TODO: Quando o Provider estiver pronto, vamos trocar este
-          // Center por um Consumer que ouve o TaskTypeProvider
-          // e mostra um LoadingSpinner() ou a lista.
-          // Por agora, mostramos a lista "mockada" (falsa)
-          _buildTaskList(context),
-    );
-  }
+          // Usa o Consumer para "ouvir" as mudanças do Provider
+          Consumer<TaskTypeProvider>(
+            builder: (context, provider, child) {
+              // 1. Estado de Loading
+              // (Verificamos o loading *depois* de buscar a lista,
+              // para o loading de apagar/editar não piscar o ecrã todo)
+              final taskTypes = provider.taskTypes;
 
-  // Este é um widget temporário para vermos a UI da lista
-  Widget _buildTaskList(BuildContext context) {
-    // Dados falsos para design
-    final mockData = {
-      'TIPO-001': 'Bug Fix',
-      'TIPO-002': 'Nova Feature',
-      'TIPO-003': 'Refactor',
-    };
+              if (taskTypes.isEmpty &&
+                  provider.state == TaskTypeState.loading) {
+                return const LoadingSpinner();
+              }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: mockData.length,
-      itemBuilder: (context, index) {
-        final id = mockData.keys.elementAt(index);
-        final name = mockData.values.elementAt(index);
+              // 2. Estado de Erro
+              if (provider.state == TaskTypeState.error) {
+                return Center(child: Text('Erro: ${provider.errorMessage}'));
+              }
 
-        // Usamos o seu GlassCard para cada item
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12.0),
-          child: GlassCard(
-            child: ListTile(
-              title: Text(name),
-              subtitle: Text(id),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
+              // 3. Estado Sucesso (Vazio)
+              if (taskTypes.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'Nenhum tipo de tarefa encontrado.\nClique no "+" para adicionar um.',
+                  ),
+                );
+              }
+
+              // 4. Constrói a lista real
+              return Stack(
                 children: [
-                  // Botão Editar
-                  IconButton(
-                    icon: Icon(Icons.edit, color: Colors.white70),
-                    onPressed: () {
-                      // TODO: Chamar _showEditDialog com os dados
-                      print("Editar $name");
+                  ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: taskTypes.length,
+                    itemBuilder: (context, index) {
+                      final task = taskTypes[index];
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: GlassCard(
+                          child: ListTile(
+                            title: Text(task.name),
+                            subtitle: Text(
+                              task.id,
+                            ), // Mostra o ID real do Firestore
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Botão Editar
+                                IconButton(
+                                  icon: Icon(Icons.edit, color: Colors.white70),
+                                  onPressed: () => _showEditDialog(
+                                    context,
+                                    taskType: task,
+                                  ), // Editar
+                                ),
+                                // Botão Apagar
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.delete,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                  onPressed: () => _deleteType(task), // Apagar
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
                     },
                   ),
-                  // Botão Apagar
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    onPressed: () {
-                      // TODO: Chamar o Provider para apagar
-                      print("Apagar $name");
-                    },
-                  ),
+                  // Mostra um spinner por cima da lista se estiver a apagar/editar
+                  if (provider.state == TaskTypeState.loading)
+                    const LoadingSpinner(),
                 ],
-              ),
-            ),
+              );
+            },
           ),
-        );
-      },
     );
   }
 }

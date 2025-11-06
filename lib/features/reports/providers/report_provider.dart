@@ -1,7 +1,9 @@
+// lib/features/reports/providers/report_provider.dart
+
 import 'package:flutter/material.dart';
 import 'package:itasks/core/services/firestore_service.dart';
 import 'package:itasks/core/services/csv_service.dart';
-import 'package:itasks/core/models/task_model.dart';
+import 'package:itasks/core/models/task_model.dart'; // <-- O modelo chama-se TaskModel
 
 class ReportProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
@@ -10,10 +12,9 @@ class ReportProvider with ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  // Listas para os diferentes relatórios
-  final List<Task> _completedTasksManager = [];
-  final List<Task> _ongoingTasksManager = [];
-  final List<Task> _completedTasksDeveloper = [];
+  List<Task> _completedTasksManager = [];
+  List<Task> _ongoingTasksManager = [];
+  List<Task> _completedTasksDeveloper = [];
 
   List<Task> get completedTasksManager => _completedTasksManager;
   List<Task> get ongoingTasksManager => _ongoingTasksManager;
@@ -42,9 +43,7 @@ class ReportProvider with ChangeNotifier {
 
   Future<String> getTodoTimeEstimate(String managerId) async {
     // TODO: Implementar o algoritmo de estimativa
-    // 1. Buscar tarefas 'ToDo' do gestor
-    // 2. Buscar tarefas 'Done' para calcular médias por StoryPoints
-    // 3. Aplicar o cálculo
+    // ...
     return "Calculando...";
   }
 
@@ -54,9 +53,8 @@ class ReportProvider with ChangeNotifier {
       await fetchManagerReports(managerId);
     }
 
-    // 2. BUSCAR DADOS RELACIONADOS (TODO: implementar no FirestoreService)
-    // List<AppUser> allDevelopers = await _firestoreService.getAllDevelopers();
-    // List<TaskType> allTaskTypes = await _firestoreService.getAllTaskTypes();
+    // 2. BUSCAR DADOS RELACIONADOS (TODO: implementar)
+    // ...
 
     // 3. Formatar os dados para a lista de listas
     List<List<dynamic>> rows = [];
@@ -76,43 +74,42 @@ class ReportProvider with ChangeNotifier {
 
     // 3.2. Adicionar dados de cada tarefa
     for (var task in _completedTasksManager) {
-      // Lógica para encontrar nomes a partir dos IDs
-      // String developerName = allDevelopers.firstWhere((d) => d.id == task.idDeveloper, orElse: () => null)?.name ?? 'N/A';
-      // String taskTypeName = allTaskTypes.firstWhere((t) => t.id == task.idTaskType, orElse: () => null)?.name ?? 'N/A';
+      // ... (lógica para buscar nomes)
 
       // Lógica de cálculo de datas
-      final plannedDays = task.previsionEndDate
-          .toDate()
-          .difference(task.previsionStartDate.toDate())
-          .inDays;
+      // <-- CORRIGIDO: Removido .toDate()
+      final plannedDays =
+          task.previsionEndDate.difference(task.previsionStartDate).inDays +
+          1; // +1 para incluir o dia de início
 
-      // Verifica se as datas reais são válidas (não são placeholders)
+      // <-- CORRIGIDO: Datas reais podem ser nulas
       final hasRealDates =
-          task.realStartDate.toDate().year > 1970 &&
-          task.realEndDate.toDate().year > 1970;
+          task.realStartDate != null && task.realEndDate != null;
+
       final realDays = hasRealDates
-          ? task.realEndDate
-                .toDate()
-                .difference(task.realStartDate.toDate())
-                .inDays
+          ? task
+                    .realEndDate! // <-- Usa ! porque verificámos o null
+                    .difference(task.realStartDate!) // <-- Usa !
+                    .inDays +
+                1 // +1
           : 0;
 
       rows.add([
         task.description,
-        // developerName, // Usar o nome quando implementar
-        // taskTypeName, // Usar o nome quando implementar
-        task.idDeveloper, // Temporário: mostrar ID até implementar busca de nomes
-        task.idTaskType, // Temporário: mostrar ID até implementar busca de nomes
-        task.previsionStartDate.toDate().toLocal().toString().split(
-          ' ',
-        )[0], // Formatar data
-        task.previsionEndDate.toDate().toLocal().toString().split(' ')[0],
+        task.idDeveloper, // Temporário
+        task.idTaskType, // Temporário
+        // <-- CORRIGIDO: Removido .toDate()
+        task.previsionStartDate.toLocal().toString().split(' ')[0],
+        task.previsionEndDate.toLocal().toString().split(' ')[0],
+
+        // <-- CORRIGIDO: Removido .toDate() e adicionado !
         hasRealDates
-            ? task.realStartDate.toDate().toLocal().toString().split(' ')[0]
+            ? task.realStartDate!.toLocal().toString().split(' ')[0]
             : 'N/A',
         hasRealDates
-            ? task.realEndDate.toDate().toLocal().toString().split(' ')[0]
+            ? task.realEndDate!.toLocal().toString().split(' ')[0]
             : 'N/A',
+
         plannedDays,
         realDays,
       ]);

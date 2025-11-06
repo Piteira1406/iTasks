@@ -7,13 +7,12 @@ import 'package:flutter/foundation.dart'
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
 /// Example:
-/// ```dart
+/// dart
 /// import 'firebase_options.dart';
 /// // ...
 /// await Firebase.initializeApp(
 ///   options: DefaultFirebaseOptions.currentPlatform,
 /// );
-/// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -46,7 +45,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '880798076515',
     projectId: 'itasks-c9fea',
     authDomain: 'itasks-c9fea.firebaseapp.com',
-    databaseURL: 'https://itasks-c9fea-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL:
+        'https://itasks-c9fea-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'itasks-c9fea.firebasestorage.app',
   );
 
@@ -55,7 +55,8 @@ class DefaultFirebaseOptions {
     appId: '1:880798076515:android:e0fe5f8889387381d37256',
     messagingSenderId: '880798076515',
     projectId: 'itasks-c9fea',
-    databaseURL: 'https://itasks-c9fea-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL:
+        'https://itasks-c9fea-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'itasks-c9fea.firebasestorage.app',
   );
 
@@ -64,7 +65,8 @@ class DefaultFirebaseOptions {
     appId: '1:880798076515:ios:d51b7cf4e0549d00d37256',
     messagingSenderId: '880798076515',
     projectId: 'itasks-c9fea',
-    databaseURL: 'https://itasks-c9fea-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL:
+        'https://itasks-c9fea-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'itasks-c9fea.firebasestorage.app',
     iosBundleId: 'com.example.itasks',
   );
@@ -74,7 +76,8 @@ class DefaultFirebaseOptions {
     appId: '1:880798076515:ios:d51b7cf4e0549d00d37256',
     messagingSenderId: '880798076515',
     projectId: 'itasks-c9fea',
-    databaseURL: 'https://itasks-c9fea-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL:
+        'https://itasks-c9fea-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'itasks-c9fea.firebasestorage.app',
     iosBundleId: 'com.example.itasks',
   );
@@ -85,7 +88,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '880798076515',
     projectId: 'itasks-c9fea',
     authDomain: 'itasks-c9fea.firebaseapp.com',
-    databaseURL: 'https://itasks-c9fea-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL:
+        'https://itasks-c9fea-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'itasks-c9fea.firebasestorage.app',
   );
 }

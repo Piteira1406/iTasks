@@ -1,18 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Task{
+class Task {
   final String id;
   final String description;
   final String taskStatus;
   final int order;
   final int storyPoints;
 
-
-  final Timestamp creationDate;
-  final Timestamp previsionEndDate;
-  final Timestamp previsionStartDate;
-  final Timestamp realEndDate;
-  final Timestamp realStartDate;
+  final DateTime creationDate;
+  final DateTime previsionEndDate;
+  final DateTime previsionStartDate;
+  final DateTime realEndDate;
+  final DateTime realStartDate;
 
   final String idManager;
   final String idDeveloper;
@@ -52,7 +51,6 @@ class Task{
     };
   }
 
-
   factory Task.fromFirestore(DocumentSnapshot doc) {
     final map = doc.data() as Map<String, dynamic>;
     return Task(
@@ -62,7 +60,7 @@ class Task{
       order: map['order'] ?? 0,
       storyPoints: map['storyPoints'] ?? 0,
       creationDate: map['creationDate'] ?? Timestamp.now(),
-      previsionEndDate: map['previsionEndDate'] ?? Timestamp.now(),
+      previsionEndDate: map['previsionEndDate'] ?? DateTime.now(),
       previsionStartDate: map['previsionStartDate'] ?? Timestamp.now(),
       realEndDate: map['realEndDate'],
       realStartDate: map['realStartDate'],
@@ -71,5 +69,4 @@ class Task{
       idTaskType: map['idTaskType'] ?? '',
     );
   }
-
 }
