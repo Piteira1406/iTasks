@@ -7,7 +7,6 @@ import 'package:itasks/core/widgets/glass_card.dart'; // O seu widget de Glassmo
 import 'package:itasks/core/widgets/loading_spinner.dart';
 import 'package:itasks/features/auth/providers/login_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:itasks/features/auth/screens/register_screen.dart';
 import 'package:itasks/core/services/auth_service.dart';
 // Imports relativos para os widgets do core
 
@@ -48,12 +47,6 @@ class _LoginFormState extends State<LoginForm> {
     // e o `build` em baixo vai mostrar a mensagem de erro.
     // Se o login for bem-sucedido, o AuthProvider global
     // vai ser atualizado e o main.dart vai navegar para o KanbanScreen.
-  }
-
-  void _navigateToRegister() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const RegisterScreen()));
   }
 
   @override
@@ -121,12 +114,6 @@ class _LoginFormState extends State<LoginForm> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                   textAlign: TextAlign.center,
                 ),
-
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: _navigateToRegister,
-                child: const Text('Não tem conta? Registe-se aqui.'),
-              ),
             ],
           ),
         ),
