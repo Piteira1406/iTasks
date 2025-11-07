@@ -1,20 +1,22 @@
 // features/kanban/screens/kanban_screen.dart
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-// --- Imports de Lógica (Novos) ---
+// --- Imports de Lógica ---
 import 'package:itasks/core/providers/auth_provider.dart';
 import 'package:itasks/features/kanban/providers/kanban_provider.dart';
 import 'package:itasks/core/widgets/loading_spinner.dart';
-import 'package:itasks/core/models/task_model.dart'; // Importa o modelo real
+import 'package:itasks/core/models/task_model.dart';
+// 1. IMPORTAR O THEME PROVIDER
+import 'package:itasks/core/providers/theme_provider.dart';
 
-// --- Imports da UI (Existentes) ---
+// --- Imports da UI ---
 import 'package:itasks/features/kanban/widgets/kanban_column_widget.dart';
 import 'package:itasks/features/kanban/screens/task_details_screen.dart';
+import 'package:itasks/core/widgets/glass_card.dart'; // Importar o GlassCard
 
-// --- Imports para o Menu de Teste (Mantidos) ---
+// --- Imports para o Menu de Teste ---
 import 'package:itasks/features/auth/screens/login_screen.dart';
 import 'package:itasks/features/management/task_type_management/screens/task_type_screen.dart';
 import 'package:itasks/features/management/user_management/screens/user_list_screen.dart';
@@ -35,7 +37,7 @@ class _KanbanScreenState extends State<KanbanScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<KanbanProvider>().tasks;
+      context.read<KanbanProvider>().fetchTasks();
     });
   }
 
@@ -55,7 +57,11 @@ class _KanbanScreenState extends State<KanbanScreen> {
   @override
   Widget build(BuildContext context) {
     final PageController controller = PageController(viewportFraction: 0.9);
+
+    // 2. OUVIR OS DOIS PROVIDERS
     final authProvider = context.watch<AuthProvider>();
+    final themeProvider = context.watch<ThemeProvider>(); // <-- Para o Toggle
+
     final bool isManager = authProvider.appUser?.type == 'Gestor';
     final String userName = authProvider.appUser?.name ?? 'Utilizador';
 
@@ -72,106 +78,98 @@ class _KanbanScreenState extends State<KanbanScreen> {
             ),
           ),
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        // O AppBar transparente já deve estar a ser definido pelo novo AppTheme
       ),
 
-      // --- Menu de Teste (COM A CORREÇÃO) ---
+      // --- 3. DRAWER COM EFEITO GLASS E TOGGLE ---
       drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            UserAccountsDrawerHeader(
-              accountName: Text("Menu de Teste de UI"),
-              accountEmail: Text(
-                isManager ? "Modo: Gestor" : "Modo: Programador",
+        backgroundColor: Colors.transparent, // <-- Fundo do Drawer transparente
+        elevation: 0, // <-- Sem sombra
+        child: GlassCard(
+          // Usa o GlassCard como fundo real
+          borderRadius: BorderRadius.zero, // <-- Remove cantos redondos
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              UserAccountsDrawerHeader(
+                accountName: Text("Menu de Teste de UI"),
+                accountEmail: Text(
+                  isManager ? "Modo: Gestor" : "Modo: Programador",
+                ),
+                currentAccountPicture: CircleAvatar(child: Icon(Icons.build)),
+                // Faz o cabeçalho transparente para o 'glass' aparecer
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.1)),
               ),
-              currentAccountPicture: CircleAvatar(child: Icon(Icons.build)),
-            ),
-            // ...
-            ListTile(
-              leading: Icon(Icons.visibility),
-              title: Text("Kanban: Ver Tarefa (Programador)"),
-              onTap: () {
-                // --- INÍCIO DA CORREÇÃO ---
-                // Esta tarefa "mock" agora usa a estrutura real do
-                // seu TaskModel (baseado na imagem image_dcb15f.png)
-                final mockTask = Task(
-                  id: 'mock-id',
-                  description: 'Tarefa de Teste (Modo Leitura)',
-                  taskStatus: 'ToDo',
-                  order: 1,
-                  storyPoints: 5,
-                  creationDate: DateTime.now(),
-                  previsionEndDate: DateTime.now().add(Duration(days: 5)),
-                  previsionStartDate: DateTime.now(),
-                  realEndDate: DateTime.timestamp(),
-                  realStartDate: DateTime.timestamp(),
-                  idManager: 'mock-manager-id',
-                  idDeveloper: 'mock-dev-id',
-                  idTaskType: 'mock-type-id (ex: Bug)',
-                );
-                // --- FIM DA CORREÇÃO ---
 
-                _navigateTo(
-                  context,
-                  TaskDetailsScreen(
-                    isReadOnly: true,
-                    task: mockTask, // Passa a tarefa mock corrigida
-                  ),
-                );
-              },
-            ),
-
-            // ... (Resto dos ListTiles do menu de teste) ...
-            ListTile(
-              leading: Icon(Icons.label),
-              title: Text("Gestão: Tipos de Tarefa"),
-              onTap: () => _navigateTo(context, const TaskTypeScreen()),
-            ),
-            ListTile(
-              leading: Icon(Icons.people),
-              title: Text("Gestão: Lista de Utilizadores"),
-              onTap: () => _navigateTo(context, const UserListScreen()),
-            ),
-            ListTile(
-              leading: Icon(Icons.add_task),
-              title: Text("Kanban: Criar Tarefa (Gestor)"),
-              onTap: () => _navigateTo(
-                context,
-                const TaskDetailsScreen(isReadOnly: false, task: null),
+              // --- Ecrãs de Gestão (Gestor) ---
+              ListTile(
+                leading: Icon(Icons.label_outline),
+                title: Text("Gestão: Tipos de Tarefa"),
+                onTap: () => _navigateTo(context, const TaskTypeScreen()),
               ),
-            ),
-            ListTile(
-              leading: Icon(Icons.timer),
-              title: Text("Relatório: Em Curso (Gestor)"),
-              onTap: () =>
-                  _navigateTo(context, const ManagerOngoingTasksScreen()),
-            ),
-            ListTile(
-              leading: Icon(Icons.check_circle),
-              title: Text("Relatório: Concluídas (Gestor)"),
-              onTap: () =>
-                  _navigateTo(context, const ManagerCompletedTasksScreen()),
-            ),
-            ListTile(
-              leading: Icon(Icons.check),
-              title: Text("Relatório: Concluídas (Programador)"),
-              onTap: () =>
-                  _navigateTo(context, const DeveloperCompletedTasksScreen()),
-            ),
-            ListTile(
-              leading: Icon(Icons.logout),
-              title: Text("Logout (Voltar ao Login)"),
-              onTap: () {
-                context.read<AuthProvider>().signOut();
-              },
-            ),
-          ],
+              ListTile(
+                leading: Icon(Icons.people_outline),
+                title: Text("Gestão: Lista de Utilizadores"),
+                onTap: () => _navigateTo(context, const UserListScreen()),
+              ),
+
+              // --- Ecrãs de Relatórios ---
+              const Divider(),
+              ListTile(
+                leading: Icon(Icons.timer_outlined),
+                title: Text("Relatório: Em Curso (Gestor)"),
+                onTap: () =>
+                    _navigateTo(context, const ManagerOngoingTasksScreen()),
+              ),
+              ListTile(
+                leading: Icon(Icons.check_circle_outline),
+                title: Text("Relatório: Concluídas (Gestor)"),
+                onTap: () =>
+                    _navigateTo(context, const ManagerCompletedTasksScreen()),
+              ),
+              ListTile(
+                leading: Icon(Icons.check_outlined),
+                title: Text("Relatório: Concluídas (Programador)"),
+                onTap: () =>
+                    _navigateTo(context, const DeveloperCompletedTasksScreen()),
+              ),
+
+              // --- Logout ---
+              const Divider(),
+              ListTile(
+                leading: Icon(Icons.logout_outlined),
+                title: Text("Logout (Voltar ao Login)"),
+                onTap: () {
+                  context.read<AuthProvider>().signOut();
+                },
+              ),
+
+              // --- 4. ADICIONADO O TOGGLE DE TEMA ---
+              ListTile(
+                leading: Icon(
+                  themeProvider.themeMode == ThemeMode.dark
+                      ? Icons.light_mode_outlined
+                      : Icons.dark_mode_outlined,
+                ),
+                title: Text(
+                  themeProvider.themeMode == ThemeMode.dark
+                      ? 'Modo Claro'
+                      : 'Modo Escuro',
+                ),
+                trailing: Switch(
+                  value: themeProvider.themeMode == ThemeMode.dark,
+                  onChanged: (bool newValue) {
+                    // Usamos 'read' dentro de um callback
+                    context.read<ThemeProvider>().toggleTheme();
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
 
-      // --- Fim do Menu de Teste ---
+      // --- Fim do Menu ---
       floatingActionButton: isManager
           ? FloatingActionButton(
               onPressed: () => _navigateToCreateTask(context),
