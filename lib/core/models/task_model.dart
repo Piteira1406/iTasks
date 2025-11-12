@@ -1,5 +1,8 @@
+// lib/core/models/task_model.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// 1. A classe chama-se 'Task', como pediu
 class Task {
   final String id;
   final String description;
@@ -10,8 +13,10 @@ class Task {
   final DateTime creationDate;
   final DateTime previsionEndDate;
   final DateTime previsionStartDate;
-  final DateTime realEndDate;
-  final DateTime realStartDate;
+
+  // 2. Corrigido: Datas reais PODEM ser nulas (usando '?')
+  final DateTime? realEndDate;
+  final DateTime? realStartDate;
 
   final String idManager;
   final String idDeveloper;
@@ -26,47 +31,99 @@ class Task {
     required this.creationDate,
     required this.previsionEndDate,
     required this.previsionStartDate,
-    required this.realEndDate,
-    required this.realStartDate,
+    this.realEndDate, // 3. Corrigido: Removido 'required'
+    this.realStartDate, // 3. Corrigido: Removido 'required'
     required this.idManager,
     required this.idDeveloper,
     required this.idTaskType,
   });
 
+  // 4. Corrigido 'fromFirestore' para lidar com Timestamps e IDs
+  factory Task.fromFirestore(DocumentSnapshot doc) {
+    final map = doc.data() as Map<String, dynamic>;
+
+    // Helper para converter Timestamp para DateTime (e lidar com nulos)
+    DateTime? timestampToDateTime(Timestamp? timestamp) {
+      return timestamp?.toDate();
+    }
+
+    return Task(
+      id: doc.id, // O ID vem do documento, não do 'map'
+      description: map['description'] ?? '',
+      taskStatus: map['taskStatus'] ?? 'ToDo', // Default para ToDo
+      order: map['order'] ?? 0,
+      storyPoints: map['storyPoints'] ?? 0,
+
+      // Converte Timestamps para DateTimes
+      creationDate: timestampToDateTime(map['creationDate']) ?? DateTime.now(),
+      previsionEndDate:
+          timestampToDateTime(map['previsionEndDate']) ?? DateTime.now(),
+      previsionStartDate:
+          timestampToDateTime(map['previsionStartDate']) ?? DateTime.now(),
+
+      // Datas reais são nulas se não existirem
+      realEndDate: timestampToDateTime(map['realEndDate']),
+      realStartDate: timestampToDateTime(map['realStartDate']),
+
+      idManager: map['idManager'] ?? '',
+      idDeveloper: map['idDeveloper'] ?? '',
+      idTaskType: map['idTaskType'] ?? '',
+    );
+  }
+
+  // 5. Método 'toMap' para salvar no Firestore (converte DateTime para Timestamp)
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      // Não incluímos o 'id', pois é o nome do documento
       'description': description,
       'taskStatus': taskStatus,
       'order': order,
       'storyPoints': storyPoints,
-      'creationDate': creationDate,
-      'previsionEndDate': previsionEndDate,
-      'previsionStartDate': previsionStartDate,
-      'realEndDate': realEndDate,
-      'realStartDate': realStartDate,
+      'creationDate': Timestamp.fromDate(creationDate),
+      'previsionEndDate': Timestamp.fromDate(previsionEndDate),
+      'previsionStartDate': Timestamp.fromDate(previsionStartDate),
+      'realEndDate': realEndDate != null
+          ? Timestamp.fromDate(realEndDate!)
+          : null,
+      'realStartDate': realStartDate != null
+          ? Timestamp.fromDate(realStartDate!)
+          : null,
       'idManager': idManager,
       'idDeveloper': idDeveloper,
       'idTaskType': idTaskType,
     };
   }
 
-  factory Task.fromFirestore(DocumentSnapshot doc) {
-    final map = doc.data() as Map<String, dynamic>;
+  // 6. Método 'copyWith' (necessário para o provider)
+  Task copyWith({
+    String? id,
+    String? description,
+    String? taskStatus,
+    int? order,
+    int? storyPoints,
+    DateTime? creationDate,
+    DateTime? previsionEndDate,
+    DateTime? previsionStartDate,
+    DateTime? realEndDate,
+    DateTime? realStartDate,
+    String? idManager,
+    String? idDeveloper,
+    String? idTaskType,
+  }) {
     return Task(
-      id: map['id'] ?? '',
-      description: map['description'] ?? '',
-      taskStatus: map['taskStatus'] ?? '',
-      order: map['order'] ?? 0,
-      storyPoints: map['storyPoints'] ?? 0,
-      creationDate: map['creationDate'] ?? Timestamp.now(),
-      previsionEndDate: map['previsionEndDate'] ?? DateTime.now(),
-      previsionStartDate: map['previsionStartDate'] ?? Timestamp.now(),
-      realEndDate: map['realEndDate'],
-      realStartDate: map['realStartDate'],
-      idManager: map['idManager'] ?? '',
-      idDeveloper: map['idDeveloper'] ?? '',
-      idTaskType: map['idTaskType'] ?? '',
+      id: id ?? this.id,
+      description: description ?? this.description,
+      taskStatus: taskStatus ?? this.taskStatus,
+      order: order ?? this.order,
+      storyPoints: storyPoints ?? this.storyPoints,
+      creationDate: creationDate ?? this.creationDate,
+      previsionEndDate: previsionEndDate ?? this.previsionEndDate,
+      previsionStartDate: previsionStartDate ?? this.previsionStartDate,
+      realEndDate: realEndDate ?? this.realEndDate,
+      realStartDate: realStartDate ?? this.realStartDate,
+      idManager: idManager ?? this.idManager,
+      idDeveloper: idDeveloper ?? this.idDeveloper,
+      idTaskType: idTaskType ?? this.idTaskType,
     );
   }
 }

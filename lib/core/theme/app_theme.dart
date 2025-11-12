@@ -24,7 +24,12 @@ class _AppColors {
   static const Color lightText = Color(0xFFE0EFFF); // Texto para o tema escuro
 
   // Cores de Superfície (Cards/Glass)
-  static const Color lightGlass = Color(0x33FFFFFF); // Branco com 20% opacidade
+  static const Color lightGlass = Color.fromARGB(
+    69,
+    255,
+    255,
+    255,
+  ); // Branco com 20% opacidade
   static const Color darkGlass = Color(0x1AFFFFFF); // Branco com 10% opacidade
   static const Color darkSurface = Color(
     0xFF1B263B,
