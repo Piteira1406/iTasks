@@ -60,16 +60,6 @@ class _UserEditScreenState extends State<UserEditScreen> {
   void _saveForm() {
     if (_formKey.currentState!.validate()) {
       // TODO: Chamar o Provider para salvar os dados
-      print("Formulário válido. A salvar...");
-      print("Nome: ${_nameController.text}");
-      print("Email: ${_usernameController.text}");
-      print("Role: $_selectedRole");
-      if (_selectedRole == UserRole.programador) {
-        print("Nível: $_selectedNivel");
-        print("Gestor ID: $_selectedManagerId");
-      } else {
-        print("Departamento: $_selectedDepartamento");
-      }
       Navigator.of(context).pop();
     }
   }

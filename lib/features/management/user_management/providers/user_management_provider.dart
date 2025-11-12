@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // ADICIONADO: Import para o Rollback
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:itasks/core/services/auth_service.dart';
+import 'package:itasks/core/services/logger_service.dart';
 import 'package:itasks/core/services/firestore_service.dart';
 import 'package:itasks/core/models/app_user_model.dart';
 import 'package:itasks/core/models/manager_model.dart';
@@ -17,16 +18,13 @@ class UserManagementProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   UserManagementProvider(this._firestoreService, this._authService) {
-    // TODO: Implementar 'getUsersStream' no FirestoreService
-    // para que esta lista se atualize em tempo real.
-    // _fetchUsers();
+    _fetchUsers();
   }
 
   Future<void> _fetchUsers() async {
     _isLoading = true;
     notifyListeners();
-    // TODO: Implementar 'getUsers' (Future) no FirestoreService
-    // _users = await _firestoreService.getUsers();
+    _users = await _firestoreService.getUsers();
     _isLoading = false;
     notifyListeners();
   }
@@ -92,7 +90,7 @@ class UserManagementProvider with ChangeNotifier {
         email: email, // Usar o email real
         type: appUser.type,
       );
-      await _firestoreService.createUtilizador(newUser, uid);
+      await _firestoreService.createUser(newUser, uid);
 
       // 3.2 Criar o Manager ou Developer
       if (appUser.type == 'Manager' && manager != null) {
@@ -127,7 +125,7 @@ class UserManagementProvider with ChangeNotifier {
       // Se a base de dados falhar, apagar o utilizador do Auth
       // para não deixar lixo
       await userCredential.user!.delete();
-      print('Error creating user in DB, rollback auth: $e');
+      LoggerService.error('Error creating user in DB, rollback auth', e);
       _isLoading = false;
       notifyListeners();
       return "Erro ao guardar dados do utilizador na base de dados.";

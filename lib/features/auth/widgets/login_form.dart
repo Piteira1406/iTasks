@@ -7,7 +7,6 @@ import 'package:itasks/core/widgets/glass_card.dart'; // O seu widget de Glassmo
 import 'package:itasks/core/widgets/loading_spinner.dart';
 import 'package:itasks/features/auth/providers/login_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:itasks/core/services/auth_service.dart';
 // Imports relativos para os widgets do core
 
 class LoginForm extends StatefulWidget {

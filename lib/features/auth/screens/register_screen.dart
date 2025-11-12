@@ -1,8 +1,13 @@
 // features/auth/screens/register_screen.dart
+// NOTE: This screen is NOT for public registration!
+// User registration is ONLY done by Managers through the User Management Dashboard.
+// This file is kept for potential future admin-only use.
 
 import 'package:flutter/material.dart';
-import 'package:itasks/features/auth/widgets/register_form.dart'; // (Use o nome do seu projeto)
+import 'package:itasks/features/auth/widgets/register_form.dart';
 
+/// This screen should ONLY be accessible by authenticated Managers
+/// through the User Management feature, not as a public registration page.
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});
 

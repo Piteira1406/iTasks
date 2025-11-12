@@ -1,18 +1,61 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2025, 11, 29);
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/Users/$(request.auth.uid)).data;
+    }
+    
+    function isManager() {
+      return isAuthenticated() && getUserData().type == 'Manager';
+    }
+    
+    function isDeveloper() {
+      return isAuthenticated() && getUserData().type == 'Developer';
+    }
+    
+    // Users collection
+    match /Users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isManager();
+      allow update, delete: if isManager() || isOwner(userId);
+    }
+    
+    // Managers collection
+    match /Managers/{managerId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isManager();
+    }
+    
+    // Developers collection
+    match /Developers/{developerId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isManager();
+    }
+    
+    // Tasks collection
+    match /Tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow create: if isManager();
+      allow update: if isManager() || 
+                      (isDeveloper() && resource.data.idDeveloper == request.auth.uid);
+      allow delete: if isManager();
+    }
+    
+    // TaskTypes collection
+    match /TaskTypes/{typeId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isManager();
     }
   }
 }

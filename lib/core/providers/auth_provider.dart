@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:itasks/core/services/auth_service.dart';
+import 'package:itasks/core/services/logger_service.dart';
 import 'package:itasks/core/services/firestore_service.dart';
 
 // Modelos que tu enviaste
@@ -58,7 +59,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _fetchAppUser(String uid) async {
     // 1. Buscar o AppUser (da coleção 'Users')
-    _appUser = await _firestoreService.getUtilizadorById(uid);
+    _appUser = await _firestoreService.getUserById(uid);
 
     // 2. CORRIGIDO: Buscar o perfil específico (Manager ou Developer)
     if (_appUser != null) {
@@ -80,7 +81,7 @@ class AuthProvider with ChangeNotifier {
       // O listener _onAuthStateChanged trata de buscar os dados
       return null; // Sucesso
     } on FirebaseAuthException catch (e) {
-      print('SignIn Error: $e');
+      LoggerService.error('Sign in error', e);
       if (e.code == 'user-not-found' ||
           e.code == 'wrong-password' ||
           e.code == 'invalid-credential') {

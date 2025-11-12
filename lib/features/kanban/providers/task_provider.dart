@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:itasks/core/services/firestore_service.dart';
+import 'package:itasks/core/services/logger_service.dart';
 import 'package:itasks/core/models/task_model.dart';
 
 class TaskDetailsProvider with ChangeNotifier {
@@ -62,7 +62,7 @@ class TaskDetailsProvider with ChangeNotifier {
       notifyListeners();
       return true; // Sucesso
     } catch (e) {
-      print('Error saving task: $e');
+      LoggerService.error('Error saving task', e);
       _isLoading = false;
       notifyListeners();
       return false; // Falha
