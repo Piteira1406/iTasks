@@ -9,38 +9,37 @@ class GlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
   final double blur;
-  final double borderRadius;
+  final BorderRadius? borderRadius;
 
   const GlassCard({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16.0),
     this.blur = 10.0,
-    this.borderRadius = 15.0,
+    this.borderRadius,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    
-    // Cores dinâmicas para o tema Glass
-    final color = isDark ? AppColors.glassDark : AppColors.glassLight;
-    final borderColor = isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight;
+    // 3. Usa o borderRadius que recebeu, ou o padrão (16.0) se for nulo
+    final effectiveBorderRadius = borderRadius ?? BorderRadius.circular(16.0);
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
+      borderRadius: effectiveBorderRadius, // <-- 4. Usado aqui
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
         child: Container(
           decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(color: borderColor, width: 1.0),
+            // Usa a cor 'surface' do seu novo tema
+            // (que já definimos como lightGlass/darkGlass)
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: effectiveBorderRadius, // <-- 5. E usado aqui
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 1.0,
+            ),
           ),
-          child: Padding(
-            padding: padding,
-            child: child,
-          ),
+          child: child,
         ),
       ),
     );

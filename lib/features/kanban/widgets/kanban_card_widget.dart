@@ -48,8 +48,9 @@ class KanbanCardWidget extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              // --- 2. ESTA É A CORREÇÃO (para a [cite: image_aaf489.png]) ---
-              // Faz o cartão "encolher" ao tamanho do seu conteúdo
+              // --- 2. ESTA É A CORREÇÃO ---
+              // Faz o cartão "encolher" ao tamanho do seu conteúdo,
+              // corrigindo o problema da imagem image_aaf489.png
               mainAxisSize: MainAxisSize.min,
               // --- FIM DA CORREÇÃO ---
               crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,217 +1,175 @@
-// features/kanban/screens/kanban_screen.dart
+// lib/features/kanban/providers/kanban_provider.dart
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:itasks/core/models/task_model.dart'; // <-- Usa a classe 'Task'
+import 'package:itasks/core/services/firestore_service.dart';
+import 'package:itasks/core/providers/auth_provider.dart'; // <-- Importa o AuthProvider
 
-// --- Imports de Lógica (Novos) ---
-import 'package:itasks/core/providers/auth_provider.dart';
-import 'package:itasks/features/kanban/providers/kanban_provider.dart';
-import 'package:itasks/core/widgets/loading_spinner.dart';
-import 'package:itasks/core/models/task_model.dart'; // Importa o modelo real
+class KanbanProvider with ChangeNotifier {
+  final FirestoreService _firestoreService;
+  final AuthProvider _authProvider; // <-- 1. Para as regras de negócio
+  StreamSubscription? _tasksSubscription;
 
-// --- Imports da UI (Existentes) ---
-import 'package:itasks/features/kanban/widgets/kanban_column_widget.dart';
-import 'package:itasks/features/kanban/screens/task_details_screen.dart';
+  List<Task> _tasks = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
 
-// --- Imports para o Menu de Teste (Mantidos) ---
-import 'package:itasks/features/auth/screens/login_screen.dart';
-import 'package:itasks/features/management/task_type_management/screens/task_type_screen.dart';
-import 'package:itasks/features/management/user_management/screens/user_list_screen.dart';
-import 'package:itasks/features/reports/screens/manager_ongoing_tasks_screen.dart';
-import 'package:itasks/features/reports/screens/manager_completed_task_screen.dart';
-import 'package:itasks/features/reports/screens/developer_completed_tasks_screen.dart';
-// --- Fim dos Imports ---
+  bool get isLoading => _isLoading;
+  String get errorMessage => _errorMessage;
 
-class KanbanScreen extends StatefulWidget {
-  const KanbanScreen({super.key});
+  // --- Getters para as colunas (já ordenados) ---
+  List<Task> get todoTasks => _getSortedList('ToDo');
+  List<Task> get doingTasks => _getSortedList('Doing');
+  List<Task> get doneTasks => _getSortedList('Done');
 
-  @override
-  State<KanbanScreen> createState() => _KanbanScreenState();
-}
+  List<Task> _getSortedList(String status) {
+    var list = _tasks.where((task) => task.taskStatus == status).toList();
+    // Ordena pela propriedade 'order'
+    list.sort((a, b) => a.order.compareTo(b.order));
+    return list;
+  }
 
-class _KanbanScreenState extends State<KanbanScreen> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<KanbanProvider>().tasks;
+  KanbanProvider(
+    this._firestoreService,
+    this._authProvider,
+  ); // <-- 2. Recebe o AuthProvider
+
+  void fetchTasks() {
+    _isLoading = true;
+    _errorMessage = '';
+    notifyListeners();
+
+    _tasksSubscription?.cancel();
+    _tasksSubscription = _firestoreService.getTasksStream().listen(
+      (tasksData) {
+        _tasks = tasksData;
+        _isLoading = false;
+        _errorMessage = '';
+        notifyListeners();
+      },
+      onError: (error) {
+        _errorMessage = "Erro ao carregar tarefas: $error";
+        _isLoading = false;
+        notifyListeners();
+      },
+    );
+  }
+
+  // --- 3. NOVA FUNÇÃO ÚNICA PARA DRAG-AND-DROP ---
+  Future<void> handleTaskMove(
+    int oldItemIndex,
+    int oldListIndex,
+    int newItemIndex,
+    int newListIndex,
+  ) async {
+    // 1. Descobrir qual a tarefa e as listas
+    // Mapeamento dos índices: 0=ToDo, 1=Doing, 2=Done
+    final List<String> listMap = ['ToDo', 'Doing', 'Done'];
+    final String oldStatus = listMap[oldListIndex];
+    final String newStatus = listMap[newListIndex];
+
+    // Encontra a tarefa que foi movida
+    final Task task = _getSortedList(oldStatus)[oldItemIndex];
+
+    // --- 4. REGRAS DE NEGÓCIO (DO ENUNCIADO) ---
+    final String currentUserId = _authProvider.appUser?.id ?? '';
+
+    // Regra: Programador só pode mover as suas próprias tarefas
+    if (_authProvider.appUser?.type == 'Programador') {
+      if (task.idDeveloper != currentUserId) {
+        _setError("Erro: Só pode mover tarefas que lhe estão atribuídas.");
+        return; // Cancela a operação
+      }
+    }
+
+    // Regra: Programador só pode ter 2 tarefas em "Doing"
+    // (Apenas se estiver a mover para "Doing", não a reordenar)
+    if (oldStatus != 'Doing' &&
+        newStatus == 'Doing' &&
+        _authProvider.appUser?.type == 'Programador') {
+      final doingTasksForThisDev = doingTasks
+          .where((t) => t.idDeveloper == currentUserId)
+          .length;
+      if (doingTasksForThisDev >= 2) {
+        _setError("Erro: Só pode ter 2 tarefas em 'Doing' em simultâneo.");
+        return; // Cancela a operação
+      }
+    }
+
+    // Regra: Tarefas "Done" não podem ser movidas
+    if (oldStatus == 'Done') {
+      _setError("Erro: Tarefas concluídas não podem ser movidas.");
+      return; // Cancela a operação
+    }
+
+    // Regra: Programador tem de seguir a OrdemDeExecucao
+    if (_authProvider.appUser?.type == 'Programador') {
+      // Se está a tentar mover algo para 'Doing' ou 'Done'
+      if (newStatus == 'Doing' || newStatus == 'Done') {
+        // Verifique se existem tarefas com 'order' mais baixa em 'ToDo'
+        final pendingTasks = todoTasks.where(
+          (t) => t.idDeveloper == currentUserId && t.order < task.order,
+        );
+        if (pendingTasks.isNotEmpty) {
+          _setError(
+            "Erro: Tem de concluir a tarefa '${pendingTasks.first.description}' primeiro.",
+          );
+          return;
+        }
+      }
+      // Se está a tentar mover algo para 'Done'
+      if (newStatus == 'Done') {
+        // Verifique se existem tarefas com 'order' mais baixa em 'Doing'
+        final doingTasksList = doingTasks.where(
+          (t) => t.idDeveloper == currentUserId && t.order < task.order,
+        );
+        if (doingTasksList.isNotEmpty) {
+          _setError(
+            "Erro: Tem de concluir a tarefa '${doingTasksList.first.description}' primeiro.",
+          );
+          return;
+        }
+      }
+    }
+
+    _setError(''); // Limpa erros antigos
+
+    // 5. ATUALIZAÇÃO DA UI (OTIMISTA)
+    // Atualiza o objeto na lista principal (esta é a forma correta)
+    final taskIndexInMainList = _tasks.indexWhere((t) => t.id == task.id);
+    if (taskIndexInMainList != -1) {
+      _tasks[taskIndexInMainList] = task.copyWith(taskStatus: newStatus);
+    }
+    notifyListeners(); // Avisa a UI
+
+    // 6. ATUALIZAÇÃO DA DB (EM SEGUNDO PLANO)
+    try {
+      await _firestoreService.updateTaskState(task.id, newStatus);
+      // TODO: Reordenar (atualizar a 'order') no Firestore
+      // ... (lógica de reorderTask)
+    } catch (e) {
+      _setError("Erro ao salvar: $e");
+      fetchTasks(); // Reverte
+    }
+  }
+
+  // Helper para mostrar erros temporários
+  void _setError(String message) {
+    _errorMessage = message;
+    notifyListeners();
+    // Limpa o erro depois de 3 segundos
+    Timer(Duration(seconds: 3), () {
+      if (_errorMessage == message) {
+        _errorMessage = '';
+        notifyListeners();
+      }
     });
   }
 
-  void _navigateToCreateTask(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => TaskDetailsScreen(task: null, isReadOnly: false),
-      ),
-    );
-  }
-
-  void _navigateTo(BuildContext context, Widget screen) {
-    Navigator.of(context).pop();
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen));
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final PageController controller = PageController(viewportFraction: 0.9);
-    final authProvider = context.watch<AuthProvider>();
-    final bool isManager = authProvider.appUser?.type == 'Gestor';
-    final String userName = authProvider.appUser?.name ?? 'Utilizador';
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Kanban iTasks'),
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(30.0),
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              'Bem-vindo(a), $userName',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-
-      // --- Menu de Teste (COM A CORREÇÃO) ---
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            UserAccountsDrawerHeader(
-              accountName: Text("Menu de Teste de UI"),
-              accountEmail: Text(
-                isManager ? "Modo: Gestor" : "Modo: Programador",
-              ),
-              currentAccountPicture: CircleAvatar(child: Icon(Icons.build)),
-            ),
-            // ...
-            ListTile(
-              leading: Icon(Icons.visibility),
-              title: Text("Kanban: Ver Tarefa (Programador)"),
-              onTap: () {
-                // --- INÍCIO DA CORREÇÃO ---
-                // Esta tarefa "mock" agora usa a estrutura real do
-                // seu TaskModel (baseado na imagem image_dcb15f.png)
-                final mockTask = Task(
-                  id: 'mock-id',
-                  description: 'Tarefa de Teste (Modo Leitura)',
-                  taskStatus: 'ToDo',
-                  order: 1,
-                  storyPoints: 5,
-                  creationDate: DateTime.now(),
-                  previsionEndDate: DateTime.now().add(Duration(days: 5)),
-                  previsionStartDate: DateTime.now(),
-                  realEndDate: DateTime.timestamp(),
-                  realStartDate: DateTime.timestamp(),
-                  idManager: 'mock-manager-id',
-                  idDeveloper: 'mock-dev-id',
-                  idTaskType: 'mock-type-id (ex: Bug)',
-                );
-                // --- FIM DA CORREÇÃO ---
-
-                _navigateTo(
-                  context,
-                  TaskDetailsScreen(
-                    isReadOnly: true,
-                    task: mockTask, // Passa a tarefa mock corrigida
-                  ),
-                );
-              },
-            ),
-
-            // ... (Resto dos ListTiles do menu de teste) ...
-            ListTile(
-              leading: Icon(Icons.label),
-              title: Text("Gestão: Tipos de Tarefa"),
-              onTap: () => _navigateTo(context, const TaskTypeScreen()),
-            ),
-            ListTile(
-              leading: Icon(Icons.people),
-              title: Text("Gestão: Lista de Utilizadores"),
-              onTap: () => _navigateTo(context, const UserListScreen()),
-            ),
-            ListTile(
-              leading: Icon(Icons.add_task),
-              title: Text("Kanban: Criar Tarefa (Gestor)"),
-              onTap: () => _navigateTo(
-                context,
-                const TaskDetailsScreen(isReadOnly: false, task: null),
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.timer),
-              title: Text("Relatório: Em Curso (Gestor)"),
-              onTap: () =>
-                  _navigateTo(context, const ManagerOngoingTasksScreen()),
-            ),
-            ListTile(
-              leading: Icon(Icons.check_circle),
-              title: Text("Relatório: Concluídas (Gestor)"),
-              onTap: () =>
-                  _navigateTo(context, const ManagerCompletedTasksScreen()),
-            ),
-            ListTile(
-              leading: Icon(Icons.check),
-              title: Text("Relatório: Concluídas (Programador)"),
-              onTap: () =>
-                  _navigateTo(context, const DeveloperCompletedTasksScreen()),
-            ),
-            ListTile(
-              leading: Icon(Icons.logout),
-              title: Text("Logout (Voltar ao Login)"),
-              onTap: () {
-                context.read<AuthProvider>().signOut();
-              },
-            ),
-          ],
-        ),
-      ),
-
-      // --- Fim do Menu de Teste ---
-      floatingActionButton: isManager
-          ? FloatingActionButton(
-              onPressed: () => _navigateToCreateTask(context),
-              child: Icon(Icons.add_task),
-            )
-          : null,
-
-      body: Consumer<KanbanProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading) {
-            return const LoadingSpinner();
-          }
-          if (provider.errorMessage.isNotEmpty) {
-            return Center(child: Text('Erro: ${provider.errorMessage}'));
-          }
-          return PageView(
-            controller: controller,
-            children: [
-              KanbanColumnWidget(
-                title: 'ToDo',
-                titleColor: Theme.of(context).colorScheme.primary,
-                tasks: provider.todoTasks,
-                isReadOnly: !isManager,
-              ),
-              KanbanColumnWidget(
-                title: 'Doing',
-                titleColor: Colors.orangeAccent,
-                tasks: provider.doingTasks,
-                isReadOnly: !isManager,
-              ),
-              KanbanColumnWidget(
-                title: 'Done',
-                titleColor: Colors.greenAccent,
-                tasks: provider.doneTasks,
-                isReadOnly: !isManager,
-              ),
-            ],
-          );
-        },
-      ),
-    );
+  void dispose() {
+    _tasksSubscription?.cancel();
+    super.dispose();
   }
 }

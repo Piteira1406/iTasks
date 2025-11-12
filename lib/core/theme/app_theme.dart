@@ -3,21 +3,41 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// Definimos as cores num local central para ser mais fácil de gerir.
-// O seu colega pode ter criado um ficheiro app_colors.dart,
-// se sim, basta importar esse ficheiro.
+// 1. Definição das novas cores pedidas
 class _AppColors {
-  static const Color primaryBlue = Color(0xFF0A7AFF);
-  static const Color lightBackground = Color(0xFFF4F4F8); // Fundo claro
-  static const Color darkBackground = Color(0xFF121212); // Fundo escuro
+  // Cores Base
+  static const Color primaryBlue = Color(
+    0xFF0A7AFF,
+  ); // Azul de Ação (links, botões)
+  static const Color softBlueBackground = Color.fromARGB(
+    255,
+    138,
+    166,
+    190,
+  ); // "azul soft"
+  static const Color midnightBlueBackground = Color(
+    0xFF0D1B2A,
+  ); // "azul meia-noite"
+
+  // Cores de Texto (para contraste)
+  static const Color darkText = Color(0xFF0D1B2A); // Texto para o tema claro
+  static const Color lightText = Color(0xFFE0EFFF); // Texto para o tema escuro
+
+  // Cores de Superfície (Cards/Glass)
+  static const Color lightGlass = Color.fromARGB(
+    69,
+    255,
+    255,
+    255,
+  ); // Branco com 20% opacidade
+  static const Color darkGlass = Color(0x1AFFFFFF); // Branco com 10% opacidade
   static const Color darkSurface = Color(
-    0xFF1E1E1E,
-  ); // Cor das "superfícies" escuras
+    0xFF1B263B,
+  ); // Um azul um pouco mais claro para cards escuros
 }
 
 class AppTheme {
   // O 'TextTheme' base que usa a fonte 'Inter'.
-  // O main.dart vai consumir 'AppTheme.lightTheme', etc.
   static final _baseTextTheme = GoogleFonts.interTextTheme(
     const TextTheme(
       headlineSmall: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
@@ -29,32 +49,33 @@ class AppTheme {
   // --- TEMA CLARO (Light) ---
   static final ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
-    // Cor de fundo principal da app
-    scaffoldBackgroundColor: _AppColors.lightBackground,
+    // Cor de fundo principal ("azul soft")
+    scaffoldBackgroundColor: _AppColors.softBlueBackground,
     // Esquema de cores principal
     colorScheme: const ColorScheme.light(
       primary: _AppColors.primaryBlue,
-      secondary: _AppColors.lightBackground,
-      surface: Colors.white, // Cor dos 'Cards'
-      onPrimary: Colors.white, // Texto no fundo
-      onSurface: Colors.black, // Texto nos 'Cards'
+      secondary: _AppColors.softBlueBackground,
+      background: _AppColors.softBlueBackground,
+      surface: _AppColors.lightGlass, // Cor dos 'Cards' de vidro
+      onPrimary: Colors.white, // Texto num botão primário
+      onBackground:
+          _AppColors.darkText, // Texto no fundo ("darkText" para contraste)
+      onSurface: _AppColors.darkText, // Texto nos 'Cards'
       error: Colors.redAccent,
     ),
     // Aplicar o tema de texto
     textTheme: _baseTextTheme.apply(
-      bodyColor: Colors.black,
-      displayColor: Colors.black,
+      bodyColor: _AppColors.darkText,
+      displayColor: _AppColors.darkText,
     ),
-    // Tema para a AppBar (para o seu 'scroll_frost_appbar')
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.transparent, // Fundamental para o 'glass'
+    // Tema para a AppBar
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.transparent,
       elevation: 0,
       centerTitle: true,
-      iconTheme: IconThemeData(color: Colors.black),
-      titleTextStyle: TextStyle(
-        color: Colors.black,
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
+      iconTheme: IconThemeData(color: _AppColors.darkText), // Ícones escuros
+      titleTextStyle: _baseTextTheme.titleMedium?.copyWith(
+        color: _AppColors.darkText,
       ),
     ),
   );
@@ -62,30 +83,32 @@ class AppTheme {
   // --- TEMA ESCURO (Dark) ---
   static final ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: _AppColors.darkBackground,
+    // Cor de fundo principal ("azul meia-noite")
+    scaffoldBackgroundColor: _AppColors.midnightBlueBackground,
     colorScheme: const ColorScheme.dark(
       primary: _AppColors.primaryBlue,
       secondary: _AppColors.darkSurface,
-      surface: _AppColors.darkSurface, // Cor dos 'Cards'
+      background: _AppColors.midnightBlueBackground,
+      surface: _AppColors.darkGlass, // Cor dos 'Cards' de vidro
       onPrimary: Colors.white,
-      onSurface: Colors.white,
+      onBackground:
+          _AppColors.lightText, // Texto no fundo ("lightText" para contraste)
+      onSurface: _AppColors.lightText, // Texto nos 'Cards'
       error: Colors.redAccent,
     ),
     // Aplicar o tema de texto
     textTheme: _baseTextTheme.apply(
-      bodyColor: Colors.white,
-      displayColor: Colors.white,
+      bodyColor: _AppColors.lightText,
+      displayColor: _AppColors.lightText,
     ),
     // Tema para a AppBar
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.transparent, // Fundamental para o 'glass'
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.transparent,
       elevation: 0,
       centerTitle: true,
-      iconTheme: IconThemeData(color: Colors.white),
-      titleTextStyle: TextStyle(
-        color: Colors.white,
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
+      iconTheme: IconThemeData(color: _AppColors.lightText), // Ícones claros
+      titleTextStyle: _baseTextTheme.titleMedium?.copyWith(
+        color: _AppColors.lightText,
       ),
     ),
   );
