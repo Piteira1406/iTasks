@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:itasks/core/services/firestore_service.dart';
 import 'package:itasks/core/services/csv_service.dart';
+import 'package:itasks/core/services/logger_service.dart';
 import 'package:itasks/core/models/task_model.dart'; // <-- O modelo chama-se TaskModel
 
 class ReportProvider with ChangeNotifier {
@@ -25,9 +26,8 @@ class ReportProvider with ChangeNotifier {
   Future<void> fetchManagerReports(String managerId) async {
     _isLoading = true;
     notifyListeners();
-    // TODO: Implementar no FirestoreService
-    // _completedTasksManager = await _firestoreService.getCompletedTasksForManager(managerId);
-    // _ongoingTasksManager = await _firestoreService.getOngoingTasksForManager(managerId);
+    _completedTasksManager = await _firestoreService.getCompletedTasksForManager(managerId);
+    _ongoingTasksManager = await _firestoreService.getOngoingTasksForManager(managerId);
     _isLoading = false;
     notifyListeners();
   }
@@ -35,8 +35,7 @@ class ReportProvider with ChangeNotifier {
   Future<void> fetchDeveloperReports(String developerId) async {
     _isLoading = true;
     notifyListeners();
-    // TODO: Implementar no FirestoreService
-    // _completedTasksDeveloper = await _firestoreService.getCompletedTasksForDeveloper(developerId);
+    _completedTasksDeveloper = await _firestoreService.getCompletedTasksForDeveloper(developerId);
     _isLoading = false;
     notifyListeners();
   }
@@ -119,7 +118,7 @@ class ReportProvider with ChangeNotifier {
     try {
       await _csvService.generateAndShareCsv(rows, "Report_Completed_Tasks.csv");
     } catch (e) {
-      print("Export error: $e");
+      LoggerService.error("Export error", e);
     }
   }
 }

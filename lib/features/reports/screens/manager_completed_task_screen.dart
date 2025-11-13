@@ -15,7 +15,6 @@ class ManagerCompletedTasksScreen extends StatelessWidget {
   void _exportCSV() {
     // TODO: Chamar o CsvService
     // O serviço vai buscar os dados ao ReportProvider e gerar o ficheiro.
-    print('A exportar CSV...');
     // (Opcional) Mostrar um Snackbar de sucesso
   }
 

@@ -105,7 +105,6 @@ class UserListScreen extends StatelessWidget {
                     ),
                     onPressed: () {
                       // TODO: Chamar o Provider para apagar
-                      print("Apagar ${user['name']}");
                     },
                   ),
                 ],

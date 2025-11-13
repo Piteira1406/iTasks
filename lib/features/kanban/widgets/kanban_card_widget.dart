@@ -41,10 +41,11 @@ class KanbanCardWidget extends StatelessWidget {
 
     return Padding(
       // Padding à volta do cartão
-      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 4.0),
       child: GlassCard(
         child: InkWell(
           onTap: () => _navigateToDetails(context),
+          borderRadius: BorderRadius.circular(15),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(

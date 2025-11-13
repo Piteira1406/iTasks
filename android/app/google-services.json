@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "880798076515",
+    "firebase_url": "https://itasks-c9fea-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "itasks-c9fea",
+    "storage_bucket": "itasks-c9fea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:880798076515:android:e0fe5f8889387381d37256",
+        "android_client_info": {
+          "package_name": "com.example.itasks"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnHJdTV5vPNkz923gyMYeRCBX14Wo7Wyw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
