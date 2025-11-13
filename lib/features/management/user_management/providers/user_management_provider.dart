@@ -82,9 +82,12 @@ class UserManagementProvider with ChangeNotifier {
 
     // --- PASSO 3: CRIAR NA BASE DE DADOS ---
     try {
+      // Gerar IDs únicos
+      final int userId = await _firestoreService.getNextUserId();
+      
       // 3.1 Criar o AppUser (na coleção 'Users')
       AppUser newUser = AppUser(
-        id: uid, // Usar o UID do Auth
+        id: userId, // Usar ID gerado
         name: appUser.name,
         username: appUser.username,
         email: email, // Usar o email real
@@ -94,20 +97,22 @@ class UserManagementProvider with ChangeNotifier {
 
       // 3.2 Criar o Manager ou Developer
       if (appUser.type == 'Manager' && manager != null) {
+        final int managerId = await _firestoreService.getNextManagerId();
         Manager newManager = Manager(
-          id: '', // Firestore irá gerar
+          id: managerId,
           name: appUser.name,
           department: manager.department,
-          idUser: uid, // Ligar ao Auth UID
+          idUser: userId, // Referenciar o AppUser.id
         );
         // CORRIGIDO: Passar só o 'newManager'
         await _firestoreService.createManager(newManager);
       } else if (appUser.type == 'Developer' && developer != null) {
+        final int developerId = await _firestoreService.getNextDeveloperId();
         Developer newDeveloper = Developer(
-          id: '', // Firestore irá gerar
+          id: developerId,
           name: appUser.name,
           experienceLevel: developer.experienceLevel,
-          idUser: uid, // Ligar ao Auth UID
+          idUser: userId, // Referenciar o AppUser.id
           idManager: developer.idManager,
         );
         // CORRIGIDO: Passar só o 'newDeveloper'

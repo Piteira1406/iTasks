@@ -11,9 +11,47 @@ const String managersCollection = 'Managers';
 const String developersCollection = 'Developers';
 const String tasksCollection = 'Tasks';
 const String taskTypesCollection = 'TaskTypes';
+const String countersCollection = 'Counters';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  // --- GERADOR DE IDs ---
+  
+  Future<int> getNextUserId() async {
+    return await _getNextId('userId');
+  }
+
+  Future<int> getNextManagerId() async {
+    return await _getNextId('managerId');
+  }
+
+  Future<int> getNextDeveloperId() async {
+    return await _getNextId('developerId');
+  }
+
+  Future<int> getNextTaskTypeId() async {
+    return await _getNextId('taskTypeId');
+  }
+
+  Future<int> _getNextId(String counterName) async {
+    final counterRef = _db.collection(countersCollection).doc(counterName);
+    
+    int nextId = 1;
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(counterRef);
+      
+      if (!snapshot.exists) {
+        transaction.set(counterRef, {'value': nextId});
+      } else {
+        final currentValue = snapshot.data()?['value'] ?? 0;
+        nextId = currentValue + 1;
+        transaction.update(counterRef, {'value': nextId});
+      }
+    });
+    
+    return nextId;
+  }
 
   // --- USERS ---
 
@@ -22,11 +60,11 @@ class FirestoreService {
   }
 
   Future<void> createManager(Manager manager) async {
-    await _db.collection(managersCollection).add(manager.toMap());
+    await _db.collection(managersCollection).doc(manager.id.toString()).set(manager.toMap());
   }
 
   Future<void> createDeveloper(Developer developer) async {
-    await _db.collection(developersCollection).add(developer.toMap());
+    await _db.collection(developersCollection).doc(developer.id.toString()).set(developer.toMap());
   }
 
   Future<AppUser?> getUserById(String uid) async {
@@ -49,9 +87,18 @@ class FirestoreService {
   }
 
   Future<Manager?> getManagerByUserId(String uid) async {
+    // Buscar pelo UID do Firebase Auth (que continua sendo String)
+    // mas comparar com o campo idUser que agora é int
+    // Precisamos converter uid para int se for necessário
+    final userDoc = await _db.collection(usersCollection).doc(uid).get();
+    if (!userDoc.exists) return null;
+    
+    final userData = userDoc.data() as Map<String, dynamic>;
+    final int userId = userData['id'] ?? 0;
+    
     final query = await _db
         .collection(managersCollection)
-        .where('idUser', isEqualTo: uid)
+        .where('idUser', isEqualTo: userId)
         .limit(1)
         .get();
 
@@ -62,9 +109,17 @@ class FirestoreService {
   }
 
   Future<Developer?> getDeveloperByUserId(String uid) async {
+    // Buscar pelo UID do Firebase Auth (que continua sendo String)
+    // mas comparar com o campo idUser que agora é int
+    final userDoc = await _db.collection(usersCollection).doc(uid).get();
+    if (!userDoc.exists) return null;
+    
+    final userData = userDoc.data() as Map<String, dynamic>;
+    final int userId = userData['id'] ?? 0;
+    
     final query = await _db
         .collection(developersCollection)
-        .where('idUser', isEqualTo: uid)
+        .where('idUser', isEqualTo: userId)
         .limit(1)
         .get();
 
@@ -182,7 +237,7 @@ class FirestoreService {
   // --- TASK TYPES ---
 
   Future<void> createTaskType(TaskTypeModel taskType) async {
-    await _db.collection(taskTypesCollection).add(taskType.toMap());
+    await _db.collection(taskTypesCollection).doc(taskType.id.toString()).set(taskType.toMap());
   }
 
   Stream<List<TaskTypeModel>> getTaskTypesStream() {

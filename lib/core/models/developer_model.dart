@@ -1,11 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Developer {
-  final String id;
+  final int id;
   final String name;
   final String experienceLevel;
-  final String idUser;
-  final String idManager;
+  final int idUser;
+  final int idManager;
 
   Developer({
     required this.id,
@@ -28,11 +28,11 @@ class Developer {
   factory Developer.fromFirestore(DocumentSnapshot doc) {
     final map = doc.data() as Map<String, dynamic>;
     return Developer(
-      id: map['id'] ?? '',
+      id: map['id'] ?? 0,
       name: map['name'] ?? '',
       experienceLevel: map['experienceLevel'] ?? '',
-      idUser: map['idUser'] ?? '',
-      idManager: map['idManager'] ?? '',
+      idUser: map['idUser'] ?? 0,
+      idManager: map['idManager'] ?? 0,
     );
   }
 }

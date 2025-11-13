@@ -10,8 +10,8 @@ class TaskDetailsProvider with ChangeNotifier {
   String _description = '';
   int _storyPoints = 0;
   int _executionOrder = 0;
-  String? _selectedDeveloperId;
-  String? _selectedTaskTypeId;
+  int? _selectedDeveloperId;
+  int? _selectedTaskTypeId;
   DateTime _plannedStartDate = DateTime.now();
   DateTime _plannedEndDate = DateTime.now().add(Duration(days: 1));
 
@@ -24,12 +24,12 @@ class TaskDetailsProvider with ChangeNotifier {
   void setDescription(String desc) => _description = desc;
   void setStoryPoints(int points) => _storyPoints = points;
   void setExecutionOrder(int order) => _executionOrder = order;
-  void setDeveloperId(String id) => _selectedDeveloperId = id;
-  void setTaskTypeId(String id) => _selectedTaskTypeId = id;
+  void setDeveloperId(int id) => _selectedDeveloperId = id;
+  void setTaskTypeId(int id) => _selectedTaskTypeId = id;
   void setPlannedStartDate(DateTime date) => _plannedStartDate = date;
   void setPlannedEndDate(DateTime date) => _plannedEndDate = date;
 
-  Future<bool> saveTask(String managerId) async {
+  Future<bool> saveTask(int managerId) async {
     _isLoading = true;
     notifyListeners();
 

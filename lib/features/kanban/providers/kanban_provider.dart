@@ -73,7 +73,7 @@ class KanbanProvider with ChangeNotifier {
     final Task task = _getSortedList(oldStatus)[oldItemIndex];
 
     // --- 4. REGRAS DE NEGÓCIO (DO ENUNCIADO) ---
-    final String currentUserId = _authProvider.appUser?.id ?? '';
+    final int currentUserId = _authProvider.appUser?.id ?? 0;
 
     // Regra: Programador só pode mover as suas próprias tarefas
     if (_authProvider.appUser?.type == 'Developer') {

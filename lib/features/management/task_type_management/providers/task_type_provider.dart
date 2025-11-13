@@ -50,7 +50,8 @@ class TaskTypeProvider extends ChangeNotifier {
     try {
       if (existingTaskType == null) {
         // --- Criar Novo ---
-        final newTask = TaskTypeModel(id: '', name: name);
+        final int newId = await _firestoreService.getNextTaskTypeId();
+        final newTask = TaskTypeModel(id: newId, name: name);
         // Chama o método correto do serviço
         await _firestoreService.createTaskType(newTask);
       } else {

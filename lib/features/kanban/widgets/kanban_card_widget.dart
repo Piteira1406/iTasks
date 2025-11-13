@@ -36,8 +36,8 @@ class KanbanCardWidget extends StatelessWidget {
     // final taskTypeName = context.watch<TaskTypeProvider>().getTaskTypeNameById(task.idTaskType);
 
     // Temporário: Mostra os IDs até os providers estarem ligados
-    final String devName = task.idDeveloper;
-    final String taskTypeName = task.idTaskType;
+    final String devName = task.idDeveloper.toString();
+    final String taskTypeName = task.idTaskType.toString();
 
     return Padding(
       // Padding à volta do cartão

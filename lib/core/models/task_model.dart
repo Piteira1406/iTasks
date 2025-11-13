@@ -18,9 +18,9 @@ class Task {
   final DateTime? realEndDate;
   final DateTime? realStartDate;
 
-  final String idManager;
-  final String idDeveloper;
-  final String idTaskType;
+  final int idManager;
+  final int idDeveloper;
+  final int idTaskType;
 
   Task({
     required this.id,
@@ -65,9 +65,9 @@ class Task {
       realEndDate: timestampToDateTime(map['realEndDate']),
       realStartDate: timestampToDateTime(map['realStartDate']),
 
-      idManager: map['idManager'] ?? '',
-      idDeveloper: map['idDeveloper'] ?? '',
-      idTaskType: map['idTaskType'] ?? '',
+      idManager: map['idManager'] ?? 0,
+      idDeveloper: map['idDeveloper'] ?? 0,
+      idTaskType: map['idTaskType'] ?? 0,
     );
   }
 
@@ -106,10 +106,10 @@ class Task {
     DateTime? previsionStartDate,
     DateTime? realEndDate,
     DateTime? realStartDate,
-    String? idManager,
-    String? idDeveloper,
-    String? idTaskType,
-  }) {
+    int? idManager,
+    int? idDeveloper,
+    int? idTaskType,
+  ) {
     return Task(
       id: id ?? this.id,
       description: description ?? this.description,

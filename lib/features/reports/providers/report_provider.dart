@@ -95,8 +95,8 @@ class ReportProvider with ChangeNotifier {
 
       rows.add([
         task.description,
-        task.idDeveloper, // Temporário
-        task.idTaskType, // Temporário
+        task.idDeveloper.toString(), // Convertido para String
+        task.idTaskType.toString(), // Convertido para String
         // <-- CORRIGIDO: Removido .toDate()
         task.previsionStartDate.toLocal().toString().split(' ')[0],
         task.previsionEndDate.toLocal().toString().split(' ')[0],
