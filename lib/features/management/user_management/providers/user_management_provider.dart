@@ -108,7 +108,7 @@ class UserManagementProvider with ChangeNotifier {
       // 3.2 Criar o Manager ou Developer
       if (appUser.type == 'Manager' && manager != null) {
         Manager newManager = Manager(
-          id: '', // Firestore gera
+          id: "", // Firestore gera
           name: appUser.name,
           department: manager.department,
           idUser: uid, // Liga ao Auth UID
@@ -117,7 +117,7 @@ class UserManagementProvider with ChangeNotifier {
       } else if (appUser.type == 'Developer' && developer != null) {
         // Mudei para Developer (estava Programador no texto antigo, mas o objeto é Developer)
         Developer newDeveloper = Developer(
-          id: 0, // Firestore gera
+          id: "", // Firestore gera
           name: appUser.name,
           experienceLevel: developer.experienceLevel,
           idUser: uid, // Liga ao Auth UID

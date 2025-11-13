@@ -118,7 +118,8 @@ class FirestoreService {
     final querySnapshot = await _db
         .collection(tasksCollection)
         .where('idManager', isEqualTo: managerId)
-        .where('taskStatus', whereIn: ['ToDo', 'Doing']).get();
+        .where('taskStatus', whereIn: ['ToDo', 'Doing'])
+        .get();
 
     return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
   }
@@ -164,7 +165,10 @@ class FirestoreService {
   }
 
   Future<void> updateManager(Manager manager) async {
-    await _db.collection(managersCollection).doc(manager.id).update(manager.toMap());
+    await _db
+        .collection(managersCollection)
+        .doc(manager.id.toString())
+        .update(manager.toMap());
   }
 
   Future<void> deleteManager(String managerId) async {
@@ -172,7 +176,10 @@ class FirestoreService {
   }
 
   Future<void> updateDeveloper(Developer developer) async {
-    await _db.collection(developersCollection).doc(developer.id).update(developer.toMap());
+    await _db
+        .collection(developersCollection)
+        .doc(developer.id.toString())
+        .update(developer.toMap());
   }
 
   Future<void> deleteDeveloper(String developerId) async {
