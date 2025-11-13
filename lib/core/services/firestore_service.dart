@@ -1,45 +1,89 @@
-// lib/core/services/firestore_service.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:itasks/core/models/app_user_model.dart';
 import 'package:itasks/core/models/developer_model.dart';
 import 'package:itasks/core/models/manager_model.dart';
-import 'package:itasks/core/models/task_model.dart'; // <-- Corrigido para TaskModel
-import 'package:itasks/core/models/task_type_model.dart';
+import 'package:itasks/core/models/task_model.dart';
+import 'package:itasks/core/models/task_type_model.dart'; // <-- O NOME DA CLASSE AQUI DENTRO É 'TaskType'
+
+// ADICIONADO: Padronização dos nomes das coleções
+const String usersCollection = 'Users';
+const String managersCollection = 'Managers';
+const String developersCollection = 'Developers';
+const String tasksCollection = 'Tasks';
+const String taskTypesCollection = 'TaskTypes';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  //USERS
+  // --- USERS ---
 
-  Future<void> createUtilizador(AppUser user, String uid) async {
-    await _db.collection('Utilizador').doc(uid).set(user.toMap());
+  Future<void> createUser(AppUser user, String uid) async {
+    await _db.collection(usersCollection).doc(uid).set(user.toMap());
   }
 
-  Future<void> createManager(Manager manager, String uid) async {
-    await _db.collection('Manager').add(manager.toMap());
+  Future<void> createManager(Manager manager) async {
+    await _db.collection(managersCollection).add(manager.toMap());
   }
 
-  Future<void> createDeveloper(Developer developer, String uid) async {
-    await _db.collection('Developer').add(developer.toMap());
+  Future<void> createDeveloper(Developer developer) async {
+    await _db.collection(developersCollection).add(developer.toMap());
   }
 
-  Future<AppUser?> getUtilizadorById(String uid) async {
-    final doc = await _db.collection('Utilizador').doc(uid).get();
+  Future<AppUser?> getUserById(String uid) async {
+    final doc = await _db.collection(usersCollection).doc(uid).get();
     if (doc.exists) {
       return AppUser.fromFirestore(doc);
     }
     return null;
   }
 
-  //TASKS
+  // --- MÉTODOS ADICIONADOS (CRÍTICOS PARA O PROJETO) ---
+
+  Future<bool> isUsernameUnique(String username) async {
+    final querySnapshot = await _db
+        .collection(usersCollection)
+        .where('username', isEqualTo: username)
+        .limit(1)
+        .get();
+    return querySnapshot.docs.isEmpty;
+  }
+
+  Future<Manager?> getManagerByUserId(String uid) async {
+    final query = await _db
+        .collection(managersCollection)
+        .where('idUser', isEqualTo: uid)
+        .limit(1)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      return Manager.fromFirestore(query.docs.first);
+    }
+    return null;
+  }
+
+  Future<Developer?> getDeveloperByUserId(String uid) async {
+    final query = await _db
+        .collection(developersCollection)
+        .where('idUser', isEqualTo: uid)
+        .limit(1)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      return Developer.fromFirestore(query.docs.first);
+    }
+    return null;
+  }
+
+  //TODO: Add here methods Update and delete for users (like the business rule of manager)
+
+  // --- TASKS ---
 
   Future<void> createTask(Task task) async {
-    await _db.collection('Task').add(task.toMap());
+    await _db.collection(tasksCollection).add(task.toMap());
   }
 
   Stream<List<Task>> getTasksStream() {
-    return _db.collection('Task').snapshots().map((snapshot) {
+    return _db.collection(tasksCollection).snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
         return Task.fromFirestore(doc);
       }).toList();
@@ -47,38 +91,125 @@ class FirestoreService {
   }
 
   Future<void> updateTaskState(String taskId, String newState) async {
-    await _db.collection('Task').doc(taskId).update({
+    await _db.collection(tasksCollection).doc(taskId).update({
       'taskStatus': newState,
       if (newState == 'Doing') 'realStartDate': Timestamp.now(),
       if (newState == 'Done') 'realEndDate': Timestamp.now(),
     });
   }
 
-  //TODO: Add here methods for getting tasks by developer, by manager, by status, etc.
+  Future<void> updateTaskOrder(String taskId, int newOrder) async {
+    await _db.collection(tasksCollection).doc(taskId).update({
+      'order': newOrder,
+    });
+  }
 
-  //TASK TYPES
+  Future<List<Task>> getCompletedTasksForManager(String managerId) async {
+    final querySnapshot = await _db
+        .collection(tasksCollection)
+        .where('idManager', isEqualTo: managerId)
+        .where('taskStatus', isEqualTo: 'Done')
+        .get();
+
+    return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
+  }
+
+  Future<List<Task>> getOngoingTasksForManager(String managerId) async {
+    final querySnapshot = await _db
+        .collection(tasksCollection)
+        .where('idManager', isEqualTo: managerId)
+        .where('taskStatus', whereIn: ['ToDo', 'Doing']).get();
+
+    return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
+  }
+
+  Future<List<Task>> getCompletedTasksForDeveloper(String developerId) async {
+    final querySnapshot = await _db
+        .collection(tasksCollection)
+        .where('idDeveloper', isEqualTo: developerId)
+        .where('taskStatus', isEqualTo: 'Done')
+        .get();
+
+    return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
+  }
+
+  Future<List<Task>> getTasksByDeveloper(String developerId) async {
+    final querySnapshot = await _db
+        .collection(tasksCollection)
+        .where('idDeveloper', isEqualTo: developerId)
+        .get();
+
+    return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
+  }
+
+  // --- USERS ---
+
+  Stream<List<AppUser>> getUsersStream() {
+    return _db.collection(usersCollection).snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => AppUser.fromFirestore(doc)).toList();
+    });
+  }
+
+  Future<List<AppUser>> getUsers() async {
+    final querySnapshot = await _db.collection(usersCollection).get();
+    return querySnapshot.docs.map((doc) => AppUser.fromFirestore(doc)).toList();
+  }
+
+  Future<void> updateUser(String uid, AppUser user) async {
+    await _db.collection(usersCollection).doc(uid).update(user.toMap());
+  }
+
+  Future<void> deleteUser(String uid) async {
+    await _db.collection(usersCollection).doc(uid).delete();
+  }
+
+  Future<void> updateManager(Manager manager) async {
+    await _db.collection(managersCollection).doc(manager.id).update(manager.toMap());
+  }
+
+  Future<void> deleteManager(String managerId) async {
+    await _db.collection(managersCollection).doc(managerId).delete();
+  }
+
+  Future<void> updateDeveloper(Developer developer) async {
+    await _db.collection(developersCollection).doc(developer.id).update(developer.toMap());
+  }
+
+  Future<void> deleteDeveloper(String developerId) async {
+    await _db.collection(developersCollection).doc(developerId).delete();
+  }
+
+  // --- TASK TYPES ---
+
   Future<void> createTaskType(TaskTypeModel taskType) async {
-    // .add() cria um ID automático
-    await _db.collection('TaskType').add(taskType.toMap());
+    await _db.collection(taskTypesCollection).add(taskType.toMap());
   }
 
   Stream<List<TaskTypeModel>> getTaskTypesStream() {
-    return _db.collection('TaskType').snapshots().map((snapshot) {
+    // <-- CORRIGIDO: de 'TaskTypeModel' para 'TaskType'
+    return _db.collection(taskTypesCollection).snapshots().map((snapshot) {
       return snapshot.docs
           .map((doc) => TaskTypeModel.fromFirestore(doc))
           .toList();
     });
   }
 
-  // --- MÉTODO 'updateTaskType' ADICIONADO ---
-  // (Corrige o erro 'updateTaskTypeModel isn't defined')
   Future<void> updateTaskType(TaskTypeModel taskType) async {
     // Usa o ID do modelo para saber qual documento atualizar
-    await _db.collection('TaskType').doc(taskType.id).update(taskType.toMap());
+    await _db
+        .collection(
+          taskTypesCollection,
+        ) // <-- CORRIGIDO: de 'TaskType' para a constante
+        .doc(taskType.id)
+        .update(taskType.toMap());
   }
 
-  // --- MÉTODO 'deleteTaskType' ADICIONADO ---
   Future<void> deleteTaskType(String taskTypeId) async {
-    await _db.collection('TaskType').doc(taskTypeId).delete();
+    await _db
+        .collection(
+          taskTypesCollection,
+        ) // <-- CORRIGIDO: de 'TaskType' para a constante
+        .doc(taskTypeId)
+        .delete();
   }
 }

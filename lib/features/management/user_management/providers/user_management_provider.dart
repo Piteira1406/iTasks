@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:itasks/core/services/auth_service.dart';
+import 'package:itasks/core/services/logger_service.dart';
 import 'package:itasks/core/services/firestore_service.dart';
 import 'package:itasks/core/models/app_user_model.dart';
 import 'package:itasks/core/models/manager_model.dart';
@@ -9,88 +11,124 @@ class UserManagementProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
   final AuthService _authService;
 
-  final List<AppUser> _users = [];
+  List<AppUser> _users = []; // CORRIGIDO: Removido 'final'
   bool _isLoading = false;
 
   List<AppUser> get users => _users;
   bool get isLoading => _isLoading;
 
   UserManagementProvider(this._firestoreService, this._authService) {
-    // TODO: Implementar 'getUsersStream' no FirestoreService
-    // para que esta lista se atualize em tempo real.
     _fetchUsers();
   }
 
   Future<void> _fetchUsers() async {
     _isLoading = true;
     notifyListeners();
-    // TODO: Implementar 'getUsers' (Future) no FirestoreService
-    // _users = await _firestoreService.getUsers();
+    _users = await _firestoreService.getUsers();
     _isLoading = false;
     notifyListeners();
   }
 
-  Future<bool> createNewUser({
+  // CORRIGIDO: Devolve String? de erro em vez de bool
+  Future<String?> createNewUser({
     required String email,
     required String password,
-    required AppUser appUser,
+    required AppUser appUser, // Este é um 'template' com nome, username, type
     Manager? manager,
     Developer? developer,
   }) async {
     _isLoading = true;
     notifyListeners();
 
-    final userCredential = await _authService.createUserInAuth(
-      email: email,
-      password: password,
+    // --- PASSO 1: VERIFICAR REGRA DE NEGÓCIO (USERNAME ÚNICO) ---
+    final bool isUnique = await _firestoreService.isUsernameUnique(
+      appUser.username,
     );
-
-    if (userCredential == null || userCredential.user == null) {
+    if (!isUnique) {
       _isLoading = false;
       notifyListeners();
-      return false;
+      return "Erro: O Username '${appUser.username}' já está a ser utilizado.";
+    }
+
+    // --- PASSO 2: CRIAR NO AUTH ---
+    // Usamos 'late' porque o userCredential só é preciso no 'catch'
+    late UserCredential userCredential;
+
+    try {
+      final credential = await _authService.createUserInAuth(
+        email: email,
+        password: password,
+      );
+
+      if (credential == null || credential.user == null) {
+        _isLoading = false;
+        notifyListeners();
+        return "Erro ao criar utilizador (ex: email já existe ou password fraca).";
+      }
+      userCredential = credential;
+    } on FirebaseAuthException catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      if (e.code == 'email-already-in-use') {
+        return 'Erro: O email fornecido já está a ser utilizado.';
+      }
+      if (e.code == 'weak-password') {
+        return 'Erro: A password é demasiado fraca.';
+      }
+      return 'Erro de autenticação: ${e.code}';
     }
 
     final uid = userCredential.user!.uid;
 
+    // --- PASSO 3: CRIAR NA BASE DE DADOS ---
     try {
+      // 3.1 Criar o AppUser (na coleção 'Users')
       AppUser newUser = AppUser(
-        id: uid,
+        id: uid, // Usar o UID do Auth
         name: appUser.name,
         username: appUser.username,
-        email: email,
+        email: email, // Usar o email real
         type: appUser.type,
       );
-      await _firestoreService.createUtilizador(newUser, uid);
+      await _firestoreService.createUser(newUser, uid);
 
+      // 3.2 Criar o Manager ou Developer
       if (appUser.type == 'Manager' && manager != null) {
         Manager newManager = Manager(
-          id: '',
+          id: '', // Firestore irá gerar
           name: appUser.name,
           department: manager.department,
-          idUser: uid,
+          idUser: uid, // Ligar ao Auth UID
         );
-        await _firestoreService.createManager(newManager, uid);
+        // CORRIGIDO: Passar só o 'newManager'
+        await _firestoreService.createManager(newManager);
       } else if (appUser.type == 'Developer' && developer != null) {
         Developer newDeveloper = Developer(
-          id: '',
+          id: '', // Firestore irá gerar
           name: appUser.name,
           experienceLevel: developer.experienceLevel,
-          idUser: uid,
+          idUser: uid, // Ligar ao Auth UID
           idManager: developer.idManager,
         );
-        await _firestoreService.createDeveloper(newDeveloper, uid);
+        // CORRIGIDO: Passar só o 'newDeveloper'
+        await _firestoreService.createDeveloper(newDeveloper);
+      } else {
+        // Se o tipo não for válido ou o objeto for nulo
+        throw Exception("Tipo de utilizador inválido ou dados em falta.");
       }
 
       _isLoading = false;
       notifyListeners();
-      return true;
+      return null; // Sucesso
     } catch (e) {
-      // TODO: Idealmente, devíamos apagar o utilizador do Auth
-      print('Error creating user: $e');
+      // --- PASSO 4: ROLLBACK (DESFAZER) ---
+      // Se a base de dados falhar, apagar o utilizador do Auth
+      // para não deixar lixo
+      await userCredential.user!.delete();
+      LoggerService.error('Error creating user in DB, rollback auth', e);
       _isLoading = false;
       notifyListeners();
-      return false;
+      return "Erro ao guardar dados do utilizador na base de dados.";
     }
   }
 

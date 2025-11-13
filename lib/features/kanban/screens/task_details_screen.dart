@@ -59,7 +59,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   void _saveForm() {
     if (_formKey.currentState!.validate()) {
       // TODO: Chamar o Provider para salvar a tarefa
-      print("A salvar tarefa...");
       Navigator.of(context).pop();
     }
   }

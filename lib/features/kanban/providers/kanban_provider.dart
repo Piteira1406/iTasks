@@ -76,7 +76,7 @@ class KanbanProvider with ChangeNotifier {
     final String currentUserId = _authProvider.appUser?.id ?? '';
 
     // Regra: Programador só pode mover as suas próprias tarefas
-    if (_authProvider.appUser?.type == 'Programador') {
+    if (_authProvider.appUser?.type == 'Developer') {
       if (task.idDeveloper != currentUserId) {
         _setError("Erro: Só pode mover tarefas que lhe estão atribuídas.");
         return; // Cancela a operação
@@ -87,7 +87,7 @@ class KanbanProvider with ChangeNotifier {
     // (Apenas se estiver a mover para "Doing", não a reordenar)
     if (oldStatus != 'Doing' &&
         newStatus == 'Doing' &&
-        _authProvider.appUser?.type == 'Programador') {
+        _authProvider.appUser?.type == 'Developer') {
       final doingTasksForThisDev = doingTasks
           .where((t) => t.idDeveloper == currentUserId)
           .length;
@@ -104,7 +104,7 @@ class KanbanProvider with ChangeNotifier {
     }
 
     // Regra: Programador tem de seguir a OrdemDeExecucao
-    if (_authProvider.appUser?.type == 'Programador') {
+    if (_authProvider.appUser?.type == 'Developer') {
       // Se está a tentar mover algo para 'Doing' ou 'Done'
       if (newStatus == 'Doing' || newStatus == 'Done') {
         // Verifique se existem tarefas com 'order' mais baixa em 'ToDo'
@@ -136,8 +136,10 @@ class KanbanProvider with ChangeNotifier {
     _setError(''); // Limpa erros antigos
 
     // 5. ATUALIZAÇÃO DA UI (OTIMISTA)
-    // Atualiza o objeto na lista principal (esta é a forma correta)
+    // Guarda o estado anterior para rollback
+    final oldTask = task;
     final taskIndexInMainList = _tasks.indexWhere((t) => t.id == task.id);
+    
     if (taskIndexInMainList != -1) {
       _tasks[taskIndexInMainList] = task.copyWith(taskStatus: newStatus);
     }
@@ -146,11 +148,38 @@ class KanbanProvider with ChangeNotifier {
     // 6. ATUALIZAÇÃO DA DB (EM SEGUNDO PLANO)
     try {
       await _firestoreService.updateTaskState(task.id, newStatus);
-      // TODO: Reordenar (atualizar a 'order') no Firestore
-      // ... (lógica de reorderTask)
+      // Reordenar (atualizar a 'order') no Firestore se necessário
+      if (newItemIndex != oldItemIndex) {
+        await _reorderTasks(oldListIndex, newListIndex, oldItemIndex, newItemIndex);
+      }
     } catch (e) {
-      _setError("Erro ao salvar: $e");
-      fetchTasks(); // Reverte
+      // ROLLBACK: Reverte a UI para o estado anterior
+      if (taskIndexInMainList != -1) {
+        _tasks[taskIndexInMainList] = oldTask;
+      }
+      _setError("Failed to update task: ${e.toString()}");
+      notifyListeners();
+    }
+  }
+
+  Future<void> _reorderTasks(
+    int oldListIndex,
+    int newListIndex,
+    int oldItemIndex,
+    int newItemIndex,
+  ) async {
+    // Get the appropriate list based on the status
+    final List<String> listMap = ['ToDo', 'Doing', 'Done'];
+    final String newStatus = listMap[newListIndex];
+    
+    // Get all tasks in the target column sorted by order
+    final tasksInColumn = _getSortedList(newStatus);
+    
+    // Update order for all affected tasks
+    for (int i = 0; i < tasksInColumn.length; i++) {
+      if (tasksInColumn[i].order != i) {
+        await _firestoreService.updateTaskOrder(tasksInColumn[i].id, i);
+      }
     }
   }
 
