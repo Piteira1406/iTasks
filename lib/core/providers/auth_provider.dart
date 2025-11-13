@@ -53,7 +53,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> signIn(String email, String password) async {
+  Future<bool> signIn(String email, String password, String trim) async {
     try {
       await _authService.signInWithEmail(email: email, password: password);
       return true;

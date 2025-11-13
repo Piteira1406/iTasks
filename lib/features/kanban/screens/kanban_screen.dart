@@ -1,175 +1,273 @@
-// lib/features/kanban/providers/kanban_provider.dart
-
-import 'dart:async';
+import 'dart:ui'; // Para o BackdropFilter (efeito Glass)
 import 'package:flutter/material.dart';
-import 'package:itasks/core/models/task_model.dart'; // <-- Usa a classe 'Task'
-import 'package:itasks/core/services/firestore_service.dart';
-import 'package:itasks/core/providers/auth_provider.dart'; // <-- Importa o AuthProvider
+import 'package:provider/provider.dart';
+import 'package:drag_and_drop_lists/drag_and_drop_lists.dart';
 
-class KanbanProvider with ChangeNotifier {
-  final FirestoreService _firestoreService;
-  final AuthProvider _authProvider; // <-- 1. Para as regras de negócio
-  StreamSubscription? _tasksSubscription;
+import 'package:itasks/core/models/task_model.dart';
+import 'package:itasks/features/kanban/providers/kanban_provider.dart';
+import 'package:itasks/features/kanban/widgets/kanban_card_widget.dart';
+import 'package:itasks/core/providers/auth_provider.dart'; // <-- Importar o AuthProvider
 
-  List<Task> _tasks = [];
-  bool _isLoading = true;
-  String _errorMessage = '';
+// TODO: Importar o provider do Tema (ex: ThemeProvider)
 
-  bool get isLoading => _isLoading;
-  String get errorMessage => _errorMessage;
+class KanbanScreen extends StatefulWidget {
+  const KanbanScreen({super.key});
 
-  // --- Getters para as colunas (já ordenados) ---
-  List<Task> get todoTasks => _getSortedList('ToDo');
-  List<Task> get doingTasks => _getSortedList('Doing');
-  List<Task> get doneTasks => _getSortedList('Done');
+  @override
+  State<KanbanScreen> createState() => _KanbanScreenState();
+}
 
-  List<Task> _getSortedList(String status) {
-    var list = _tasks.where((task) => task.taskStatus == status).toList();
-    // Ordena pela propriedade 'order'
-    list.sort((a, b) => a.order.compareTo(b.order));
-    return list;
+class _KanbanScreenState extends State<KanbanScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Inicia o carregamento das tarefas assim que o ecrã é construído
+    // Usamos listen: false aqui porque estamos fora do método build
+    Provider.of<KanbanProvider>(context, listen: false).fetchTasks();
   }
 
-  KanbanProvider(
-    this._firestoreService,
-    this._authProvider,
-  ); // <-- 2. Recebe o AuthProvider
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      // Transparência para o efeito "Glass" funcionar no Drawer
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: const Text('iTasks Kanban'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      drawer: _buildGlassDrawer(context), // O Menu lateral
+      body: _buildKanbanBody(),
+    );
+  }
 
-  void fetchTasks() {
-    _isLoading = true;
-    _errorMessage = '';
-    notifyListeners();
+  /// Constrói o corpo principal do Kanban
+  Widget _buildKanbanBody() {
+    // O Consumer reage às mudanças no KanbanProvider (loading, listas, erros)
+    return Consumer<KanbanProvider>(
+      builder: (context, provider, child) {
+        // 1. Estado de Loading
+        if (provider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    _tasksSubscription?.cancel();
-    _tasksSubscription = _firestoreService.getTasksStream().listen(
-      (tasksData) {
-        _tasks = tasksData;
-        _isLoading = false;
-        _errorMessage = '';
-        notifyListeners();
-      },
-      onError: (error) {
-        _errorMessage = "Erro ao carregar tarefas: $error";
-        _isLoading = false;
-        notifyListeners();
+        // 2. Construção das 3 listas (ToDo, Doing, Done)
+        // O provider já nos dá as listas filtradas e ordenadas
+        final List<DragAndDropList> kanbanLists = [
+          _buildDragList(context, "A Fazer", provider.todoTasks),
+          _buildDragList(context, "Em Execução", provider.doingTasks),
+          _buildDragList(context, "Concluído", provider.doneTasks),
+        ];
+
+        // 3. O widget principal do DragAndDropLists
+        return Column(
+          children: [
+            // Área para mostrar erros temporários (das regras de negócio)
+            if (provider.errorMessage.isNotEmpty)
+              Container(
+                width: double.infinity,
+                color: Colors.red.withOpacity(0.9),
+                padding: const EdgeInsets.all(10),
+                child: Text(
+                  provider.errorMessage,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+
+            // O "Board"
+            Expanded(
+              child: DragAndDropLists(
+                children: kanbanLists,
+
+                // --- Configuração Visual ---
+                axis: Axis.horizontal, // Scroll horizontal
+                listWidth: 320, // Largura de cada coluna
+                listDraggingWidth: 320, // Largura ao arrastar
+                listPadding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 20,
+                ),
+
+                // --- Decoração das Colunas ---
+                listDecoration: BoxDecoration(
+                  color: Theme.of(context).cardColor.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: 5,
+                      color: Colors.black.withOpacity(0.1),
+                    ),
+                  ],
+                ),
+                // (O 'listHeaderDecoration' foi movido para o _buildDragList)
+
+                // --- A LÓGICA PRINCIPAL ---
+                onItemReorder:
+                    (
+                      int oldItemIndex,
+                      int oldListIndex,
+                      int newItemIndex,
+                      int newListIndex,
+                    ) {
+                      provider.handleTaskMove(
+                        oldItemIndex,
+                        oldListIndex,
+                        newItemIndex,
+                        newListIndex,
+                      );
+                    },
+
+                // Não precisamos disto (reordenar colunas)
+                onListReorder: (int oldListIndex, int newListIndex) {
+                  // Não faz nada
+                },
+              ),
+            ),
+          ],
+        );
       },
     );
   }
 
-  // --- 3. NOVA FUNÇÃO ÚNICA PARA DRAG-AND-DROP ---
-  Future<void> handleTaskMove(
-    int oldItemIndex,
-    int oldListIndex,
-    int newItemIndex,
-    int newListIndex,
-  ) async {
-    // 1. Descobrir qual a tarefa e as listas
-    // Mapeamento dos índices: 0=ToDo, 1=Doing, 2=Done
-    final List<String> listMap = ['ToDo', 'Doing', 'Done'];
-    final String oldStatus = listMap[oldListIndex];
-    final String newStatus = listMap[newListIndex];
+  /// Helper para construir uma coluna (DragAndDropList)
+  DragAndDropList _buildDragList(
+    BuildContext context,
+    String title,
+    List<Task> tasks,
+  ) {
+    // --- INÍCIO DAS CORREÇÕES (da imagem image_ac51a6.png) ---
 
-    // Encontra a tarefa que foi movida
-    final Task task = _getSortedList(oldStatus)[oldItemIndex];
+    // 1. Precisamos do AuthProvider para saber o tipo de utilizador
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    // --- 4. REGRAS DE NEGÓCIO (DO ENUNCIADO) ---
-    final String currentUserId = _authProvider.appUser?.id ?? '';
+    // 2. Definimos a lógica do isReadOnly
+    final bool isReadOnly = (authProvider.appUser?.type == 'Programador');
 
-    // Regra: Programador só pode mover as suas próprias tarefas
-    if (_authProvider.appUser?.type == 'Programador') {
-      if (task.idDeveloper != currentUserId) {
-        _setError("Erro: Só pode mover tarefas que lhe estão atribuídas.");
-        return; // Cancela a operação
-      }
-    }
+    return DragAndDropList(
+      // 3. (CORREÇÃO do erro 'listHeaderDecoration')
+      // O nome correto é 'headerDecoration' e fica aqui.
 
-    // Regra: Programador só pode ter 2 tarefas em "Doing"
-    // (Apenas se estiver a mover para "Doing", não a reordenar)
-    if (oldStatus != 'Doing' &&
-        newStatus == 'Doing' &&
-        _authProvider.appUser?.type == 'Programador') {
-      final doingTasksForThisDev = doingTasks
-          .where((t) => t.idDeveloper == currentUserId)
-          .length;
-      if (doingTasksForThisDev >= 2) {
-        _setError("Erro: Só pode ter 2 tarefas em 'Doing' em simultâneo.");
-        return; // Cancela a operação
-      }
-    }
+      // --- FIM DAS CORREÇÕES ---
 
-    // Regra: Tarefas "Done" não podem ser movidas
-    if (oldStatus == 'Done') {
-      _setError("Erro: Tarefas concluídas não podem ser movidas.");
-      return; // Cancela a operação
-    }
+      // Header (Título da coluna)
+      header: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Text(
+          "$title (${tasks.length})", // Mostra o contador de tarefas
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
+      ),
 
-    // Regra: Programador tem de seguir a OrdemDeExecucao
-    if (_authProvider.appUser?.type == 'Programador') {
-      // Se está a tentar mover algo para 'Doing' ou 'Done'
-      if (newStatus == 'Doing' || newStatus == 'Done') {
-        // Verifique se existem tarefas com 'order' mais baixa em 'ToDo'
-        final pendingTasks = todoTasks.where(
-          (t) => t.idDeveloper == currentUserId && t.order < task.order,
+      // Itens (os cartões)
+      children: tasks.map((task) {
+        return DragAndDropItem(
+          // O widget do cartão
+          child: KanbanCardWidget(
+            // 4. (CORREÇÃO do erro 'key')
+            // A 'key' deve estar no widget do cartão
+            key: ValueKey(task.id),
+
+            // 5. (CORREÇÃO do erro 'isReadOnly')
+            // Passamos a variável que definimos em cima
+            isReadOnly: isReadOnly,
+
+            task: task,
+          ),
+
+          // Regra de UI: Não permite arrastar cartões "Concluídos"
+          canDrag: task.taskStatus != 'Done',
         );
-        if (pendingTasks.isNotEmpty) {
-          _setError(
-            "Erro: Tem de concluir a tarefa '${pendingTasks.first.description}' primeiro.",
-          );
-          return;
-        }
-      }
-      // Se está a tentar mover algo para 'Done'
-      if (newStatus == 'Done') {
-        // Verifique se existem tarefas com 'order' mais baixa em 'Doing'
-        final doingTasksList = doingTasks.where(
-          (t) => t.idDeveloper == currentUserId && t.order < task.order,
-        );
-        if (doingTasksList.isNotEmpty) {
-          _setError(
-            "Erro: Tem de concluir a tarefa '${doingTasksList.first.description}' primeiro.",
-          );
-          return;
-        }
-      }
-    }
-
-    _setError(''); // Limpa erros antigos
-
-    // 5. ATUALIZAÇÃO DA UI (OTIMISTA)
-    // Atualiza o objeto na lista principal (esta é a forma correta)
-    final taskIndexInMainList = _tasks.indexWhere((t) => t.id == task.id);
-    if (taskIndexInMainList != -1) {
-      _tasks[taskIndexInMainList] = task.copyWith(taskStatus: newStatus);
-    }
-    notifyListeners(); // Avisa a UI
-
-    // 6. ATUALIZAÇÃO DA DB (EM SEGUNDO PLANO)
-    try {
-      await _firestoreService.updateTaskState(task.id, newStatus);
-      // TODO: Reordenar (atualizar a 'order') no Firestore
-      // ... (lógica de reorderTask)
-    } catch (e) {
-      _setError("Erro ao salvar: $e");
-      fetchTasks(); // Reverte
-    }
+      }).toList(),
+    );
   }
 
-  // Helper para mostrar erros temporários
-  void _setError(String message) {
-    _errorMessage = message;
-    notifyListeners();
-    // Limpa o erro depois de 3 segundos
-    Timer(Duration(seconds: 3), () {
-      if (_errorMessage == message) {
-        _errorMessage = '';
-        notifyListeners();
-      }
-    });
-  }
+  /// O Menu Lateral com efeito "Glass"
+  Widget _buildGlassDrawer(BuildContext context) {
+    // O "Auth" é só para o botão de Logout
+    final authProvider = context.watch<AuthProvider>();
 
-  @override
-  void dispose() {
-    _tasksSubscription?.cancel();
-    super.dispose();
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        topRight: Radius.circular(20),
+        bottomRight: Radius.circular(20),
+      ),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+        child: Drawer(
+          backgroundColor: Theme.of(
+            context,
+          ).scaffoldBackgroundColor.withOpacity(0.7),
+          elevation: 0,
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.5),
+                ),
+                child: Text(
+                  'Menu (${authProvider.appUser?.name ?? "Utilizador"})', // Mostra o nome do user
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              // O Botão de Toggle (mudar tema)
+              ListTile(
+                leading: const Icon(Icons.brightness_6),
+                title: const Text('Mudar Tema'),
+                trailing: Switch(
+                  value: false, // TODO: Ligar ao ThemeProvider
+                  onChanged: (val) {
+                    // TODO: Chamar o provider
+                    // context.read<ThemeProvider>().toggleTheme();
+                  },
+                ),
+              ),
+              const Divider(),
+              // Só mostra estes menus se for Manager
+              if (authProvider.appUser?.type == 'Manager') ...[
+                ListTile(
+                  leading: const Icon(Icons.settings),
+                  title: const Text('Tipos de Tarefa'),
+                  onTap: () {
+                    Navigator.of(context).pop(); // Fecha o drawer
+                    // TODO: Navigator.pushNamed(context, '/task_types');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.people),
+                  title: const Text('Gestão de Utilizadores'),
+                  onTap: () {
+                    Navigator.of(context).pop(); // Fecha o drawer
+                    // TODO: Navigator.pushNamed(context, '/user_list');
+                  },
+                ),
+                const Divider(),
+              ],
+              // TODO: Adicionar os Relatórios
+              ListTile(
+                leading: Icon(Icons.logout, color: Colors.red.shade400),
+                title: Text(
+                  'Logout',
+                  style: TextStyle(color: Colors.red.shade400),
+                ),
+                onTap: () {
+                  context.read<AuthProvider>().signOut();
+                  Navigator.of(context).pop(); // Fecha o drawer
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

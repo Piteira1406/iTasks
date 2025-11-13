@@ -48,11 +48,17 @@ Future<void> main() async {
           create: (_) => AuthProvider(authService, firestoreService),
         ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-
         Provider<AuthService>(create: (_) => authService),
 
+        // --- PROVIDER DO KANBAN ---
+
         // --- PROVIDERS DAS FEATURES ---
-        ChangeNotifierProvider(create: (_) => KanbanProvider(firestoreService)),
+        ChangeNotifierProvider(
+          create: (context) => KanbanProvider(
+            firestoreService,
+            context.read<AuthProvider>(),
+          ), // <-- Adicionado AuthProvider
+        ),
         ChangeNotifierProvider(
           create: (_) => UserManagementProvider(firestoreService, authService),
         ),
@@ -66,14 +72,14 @@ Future<void> main() async {
           create: (_) => TaskDetailsProvider(firestoreService),
         ),
       ],
-      child: const iTasksApp(),
+      child: const ITasksApp(),
     ),
   );
 }
 
 // Widget Raiz da Aplicação
-class iTasksApp extends StatelessWidget {
-  const iTasksApp({super.key});
+class ITasksApp extends StatelessWidget {
+  const ITasksApp({super.key});
 
   @override
   Widget build(BuildContext context) {

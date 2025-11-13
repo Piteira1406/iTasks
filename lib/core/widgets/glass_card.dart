@@ -1,9 +1,6 @@
 // lib/core/widgets/glass_card.dart
 import 'package:flutter/material.dart';
 import 'dart:ui'; // Para o ImageFilter
-import 'package:provider/provider.dart';
-import '../constants/app_colors.dart';
-import '../providers/theme_provider.dart';
 
 class GlassCard extends StatelessWidget {
   final Widget child;

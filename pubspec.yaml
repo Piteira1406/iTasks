@@ -43,6 +43,7 @@ dependencies:
   path_provider: ^2.1.5
   permission_handler: ^12.0.1
   share_plus: ^12.0.1
+  drag_and_drop_lists: ^0.4.0
 
 dev_dependencies:
   flutter_test:
