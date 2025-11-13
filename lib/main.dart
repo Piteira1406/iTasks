@@ -48,17 +48,16 @@ Future<void> main() async {
           create: (_) => AuthProvider(authService, firestoreService),
         ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-
         Provider<AuthService>(create: (_) => authService),
 
+        // --- PROVIDER DO KANBAN ---
+
         // --- PROVIDERS DAS FEATURES ---
-        ChangeNotifierProxyProvider<AuthProvider, KanbanProvider>(
+        ChangeNotifierProvider(
           create: (context) => KanbanProvider(
             firestoreService,
             context.read<AuthProvider>(),
-          ),
-          update: (_, authProvider, previous) =>
-              previous ?? KanbanProvider(firestoreService, authProvider),
+          ), // <-- Adicionado AuthProvider
         ),
         ChangeNotifierProvider(
           create: (_) => UserManagementProvider(firestoreService, authService),

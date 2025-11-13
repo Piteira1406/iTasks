@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:itasks/core/widgets/glass_card.dart';
 import 'package:itasks/core/widgets/custom_text_field.dart';
 import 'package:itasks/core/widgets/custom_button.dart';
-import 'package:flutter/material.dart';
 import 'package:itasks/core/models/task_type_model.dart';
 import 'package:itasks/core/widgets/loading_spinner.dart';
 
