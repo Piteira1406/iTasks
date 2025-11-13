@@ -12,13 +12,16 @@ class UserManagementProvider with ChangeNotifier {
   final AuthService _authService;
 
   List<AppUser> _users = [];
+  List<Manager> _managers = [];
   bool _isLoading = false;
 
   List<AppUser> get users => _users;
+  List<Manager> get managers => _managers;
   bool get isLoading => _isLoading;
 
   UserManagementProvider(this._firestoreService, this._authService) {
     fetchUsers(); // Chama a versão pública
+    fetchManagers(); // Fetch managers as well
   }
 
   // CORREÇÃO: Tornei este método público (sem o underscore _)
@@ -33,6 +36,15 @@ class UserManagementProvider with ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> fetchManagers() async {
+    try {
+      _managers = await _firestoreService.getManagers();
+      notifyListeners();
+    } catch (e) {
+      LoggerService.error("Erro ao buscar managers", e);
     }
   }
 
