@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:provider/provider.dart';
 import 'package:itasks/core/widgets/custom_button.dart';
 import 'package:itasks/core/widgets/custom_text_field.dart';
 
@@ -7,6 +8,7 @@ import 'package:itasks/core/widgets/custom_text_field.dart';
 import 'package:itasks/core/models/app_user_model.dart';
 import 'package:itasks/core/models/manager_model.dart';
 import 'package:itasks/core/models/developer_model.dart';
+import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
 import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
 
 // Constantes baseadas no enunciado

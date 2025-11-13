@@ -74,6 +74,11 @@ class FirestoreService {
     return null;
   }
 
+  Future<List<Manager>> getManagers() async {
+    final querySnapshot = await _db.collection(managersCollection).get();
+    return querySnapshot.docs.map((doc) => Manager.fromFirestore(doc)).toList();
+  }
+
   //TODO: Add here methods Update and delete for users (like the business rule of manager)
 
   // --- TASKS ---
