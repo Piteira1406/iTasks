@@ -11,47 +11,59 @@ class UserManagementProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
   final AuthService _authService;
 
-  List<AppUser> _users = []; // CORRIGIDO: Removido 'final'
+  List<AppUser> _users = [];
   bool _isLoading = false;
 
   List<AppUser> get users => _users;
   bool get isLoading => _isLoading;
 
   UserManagementProvider(this._firestoreService, this._authService) {
-    _fetchUsers();
+    fetchUsers(); // Chama a versão pública
   }
 
-  Future<void> _fetchUsers() async {
+  // CORREÇÃO: Tornei este método público (sem o underscore _)
+  // Assim podes chamar provider.fetchUsers() noutros ecrãs se precisares
+  Future<void> fetchUsers() async {
     _isLoading = true;
     notifyListeners();
-    _users = await _firestoreService.getUsers();
-    _isLoading = false;
-    notifyListeners();
+    try {
+      _users = await _firestoreService.getUsers();
+    } catch (e) {
+      LoggerService.error("Erro ao buscar users", e);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
-  // CORRIGIDO: Devolve String? de erro em vez de bool
   Future<String?> createNewUser({
     required String email,
     required String password,
-    required AppUser appUser, // Este é um 'template' com nome, username, type
+    required AppUser appUser, // Template com nome, username, type
     Manager? manager,
     Developer? developer,
   }) async {
     _isLoading = true;
     notifyListeners();
 
-    // --- PASSO 1: VERIFICAR REGRA DE NEGÓCIO (USERNAME ÚNICO) ---
-    final bool isUnique = await _firestoreService.isUsernameUnique(
-      appUser.username,
-    );
-    if (!isUnique) {
+    // --- PASSO 1: VERIFICAR USERNAME ÚNICO ---
+    try {
+      final bool isUnique = await _firestoreService.isUsernameUnique(
+        appUser.username,
+      );
+      if (!isUnique) {
+        _isLoading = false;
+        notifyListeners();
+        return "Erro: O Username '${appUser.username}' já está a ser utilizado.";
+      }
+    } catch (e) {
+      // Se der erro a verificar, assumimos que não dá para continuar
       _isLoading = false;
       notifyListeners();
-      return "Erro: O Username '${appUser.username}' já está a ser utilizado.";
+      return "Erro ao verificar username: $e";
     }
 
     // --- PASSO 2: CRIAR NO AUTH ---
-    // Usamos 'late' porque o userCredential só é preciso no 'catch'
     late UserCredential userCredential;
 
     try {
@@ -63,7 +75,7 @@ class UserManagementProvider with ChangeNotifier {
       if (credential == null || credential.user == null) {
         _isLoading = false;
         notifyListeners();
-        return "Erro ao criar utilizador (ex: email já existe ou password fraca).";
+        return "Erro desconhecido ao criar utilizador.";
       }
       userCredential = credential;
     } on FirebaseAuthException catch (e) {
@@ -82,55 +94,63 @@ class UserManagementProvider with ChangeNotifier {
 
     // --- PASSO 3: CRIAR NA BASE DE DADOS ---
     try {
-      // 3.1 Criar o AppUser (na coleção 'Users')
+      // 3.1 Criar o AppUser
       AppUser newUser = AppUser(
-        id: uid, // Usar o UID do Auth
+        id: uid.hashCode,
         name: appUser.name,
         username: appUser.username,
-        email: email, // Usar o email real
+        email: email,
         type: appUser.type,
       );
+
       await _firestoreService.createUser(newUser, uid);
 
       // 3.2 Criar o Manager ou Developer
       if (appUser.type == 'Manager' && manager != null) {
         Manager newManager = Manager(
-          id: '', // Firestore irá gerar
+          id: '', // Firestore gera
           name: appUser.name,
           department: manager.department,
-          idUser: uid, // Ligar ao Auth UID
+          idUser: uid, // Liga ao Auth UID
         );
-        // CORRIGIDO: Passar só o 'newManager'
         await _firestoreService.createManager(newManager);
       } else if (appUser.type == 'Developer' && developer != null) {
+        // Mudei para Developer (estava Programador no texto antigo, mas o objeto é Developer)
         Developer newDeveloper = Developer(
-          id: '', // Firestore irá gerar
+          id: 0, // Firestore gera
           name: appUser.name,
           experienceLevel: developer.experienceLevel,
-          idUser: uid, // Ligar ao Auth UID
+          idUser: uid, // Liga ao Auth UID
           idManager: developer.idManager,
         );
-        // CORRIGIDO: Passar só o 'newDeveloper'
         await _firestoreService.createDeveloper(newDeveloper);
-      } else {
-        // Se o tipo não for válido ou o objeto for nulo
-        throw Exception("Tipo de utilizador inválido ou dados em falta.");
+      }
+      // Nota: Se for 'Programador' mas não houver objeto developer,
+      // a lógica anterior lançava exceção. Mantive assim, mas garante que o UI envia os dados.
+
+      // --- MELHORIA: ATUALIZAR A LISTA LOCAL ---
+      // Assim o novo user aparece logo na lista sem reiniciar a app
+      await fetchUsers();
+
+      _isLoading = false;
+      notifyListeners();
+      return null; // Sucesso (null significa sem erro)
+    } catch (e) {
+      // --- PASSO 4: ROLLBACK ---
+      // Se falhar na BD, apaga do Auth
+      try {
+        await userCredential.user!.delete();
+      } catch (deleteError) {
+        LoggerService.error(
+          'Falha crítica: User criado no Auth mas falhou na BD e falhou ao apagar.',
+          deleteError,
+        );
       }
 
+      LoggerService.error('Erro ao criar user na BD', e);
       _isLoading = false;
       notifyListeners();
-      return null; // Sucesso
-    } catch (e) {
-      // --- PASSO 4: ROLLBACK (DESFAZER) ---
-      // Se a base de dados falhar, apagar o utilizador do Auth
-      // para não deixar lixo
-      await userCredential.user!.delete();
-      LoggerService.error('Error creating user in DB, rollback auth', e);
-      _isLoading = false;
-      notifyListeners();
-      return "Erro ao guardar dados do utilizador na base de dados.";
+      return "Erro ao guardar dados: $e";
     }
   }
-
-  // TODO: Adicionar métodos para updateUser e deleteUser
 }

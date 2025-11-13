@@ -17,7 +17,7 @@ import 'core/theme/app_theme.dart';
 // --- FEATURES ---
 // Providers das Features
 import 'features/kanban/providers/kanban_provider.dart';
-import 'features/kanban/providers/task_provider.dart';
+import 'features/kanban/providers/task_details_provider.dart';
 import 'features/management/user_management/providers/user_management_provider.dart';
 import 'features/management/task_type_management/providers/task_type_provider.dart';
 import 'features/reports/providers/report_provider.dart';
@@ -25,6 +25,8 @@ import 'features/reports/providers/report_provider.dart';
 // Ecrãs
 import 'features/auth/screens/login_screen.dart';
 import 'features/kanban/screens/kanban_screen.dart';
+import 'features/management/task_type_management/screens/task_type_screen.dart';
+import 'features/management/user_management/screens/user_list_screen.dart';
 
 // Ponto de entrada da aplicação
 Future<void> main() async {
@@ -69,7 +71,7 @@ Future<void> main() async {
           create: (_) => ReportProvider(firestoreService, csvService),
         ),
         ChangeNotifierProvider(
-          create: (_) => TaskDetailsProvider(firestoreService),
+          create: (context) => TaskDetailsProvider(firestoreService),
         ),
       ],
       child: const ITasksApp(),
@@ -99,7 +101,13 @@ class ITasksApp extends StatelessWidget {
       // AuthWrapper decide qual o primeiro ecrã a mostrar
       home: const AuthWrapper(),
 
-      // TODO: Adicionar aqui as suas rotas nomeadas se necessário
+      routes: {
+        '/kanban': (context) => const KanbanScreen(),
+        // Tens de ter estes ecrãs criados para navegar para eles:
+        '/login': (context) => const LoginScreen(),
+        '/task_types': (context) => const TaskTypeScreen(),
+        '/users': (context) => const UserListScreen(),
+      },
     );
   }
 }
