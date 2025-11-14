@@ -109,7 +109,7 @@ class Task {
     int? idManager,
     int? idDeveloper,
     int? idTaskType,
-  ) {
+  }) {
     return Task(
       id: id ?? this.id,
       description: description ?? this.description,

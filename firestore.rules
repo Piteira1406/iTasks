@@ -3,59 +3,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper functions
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    function getUserData() {
-      return get(/databases/$(database)/documents/Users/$(request.auth.uid)).data;
-    }
-    
-    function isManager() {
-      return isAuthenticated() && getUserData().type == 'Manager';
-    }
-    
-    function isDeveloper() {
-      return isAuthenticated() && getUserData().type == 'Developer';
-    }
-    
-    // Users collection
-    match /Users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isManager();
-      allow update, delete: if isManager() || isOwner(userId);
-    }
-    
-    // Managers collection
-    match /Managers/{managerId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isManager();
-    }
-    
-    // Developers collection
-    match /Developers/{developerId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isManager();
-    }
-    
-    // Tasks collection
-    match /Tasks/{taskId} {
-      allow read: if isAuthenticated();
-      allow create: if isManager();
-      allow update: if isManager() || 
-                      (isDeveloper() && resource.data.idDeveloper == request.auth.uid);
-      allow delete: if isManager();
-    }
-    
-    // TaskTypes collection
-    match /TaskTypes/{typeId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isManager();
-    }
+    // Esta regra diz: "Qualquer pessoa com Login feito pode ler e escrever tudo"
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    } 
   }
 }

@@ -1,124 +1,333 @@
-// lib/features/reports/providers/report_provider.dart
-
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:itasks/core/models/task_model.dart';
+import 'package:itasks/core/models/developer_model.dart';
+import 'package:itasks/core/models/manager_model.dart';
+import 'package:itasks/core/models/task_type_model.dart';
 import 'package:itasks/core/services/firestore_service.dart';
 import 'package:itasks/core/services/csv_service.dart';
 import 'package:itasks/core/services/logger_service.dart';
-import 'package:itasks/core/models/task_model.dart'; // <-- O modelo chama-se TaskModel
 
-class ReportProvider with ChangeNotifier {
+enum ReportType {
+  completedTasksByManager,
+  completedTasksByDeveloper,
+  ongoingTasks,
+  allTasks,
+  tasksByStatus,
+}
+
+class ReportProvider extends ChangeNotifier {
   final FirestoreService _firestoreService;
   final CsvService _csvService;
 
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
-
-  List<Task> _completedTasksManager = [];
-  List<Task> _ongoingTasksManager = [];
-  List<Task> _completedTasksDeveloper = [];
-
-  List<Task> get completedTasksManager => _completedTasksManager;
-  List<Task> get ongoingTasksManager => _ongoingTasksManager;
-  List<Task> get completedTasksDeveloper => _completedTasksDeveloper;
-
   ReportProvider(this._firestoreService, this._csvService);
 
-  Future<void> fetchManagerReports(String managerId) async {
-    _isLoading = true;
-    notifyListeners();
-    _completedTasksManager = await _firestoreService.getCompletedTasksForManager(managerId);
-    _ongoingTasksManager = await _firestoreService.getOngoingTasksForManager(managerId);
-    _isLoading = false;
-    notifyListeners();
-  }
+  bool _isLoading = false;
+  String? _errorMessage;
+  String? _successMessage;
+  
+  List<Task> _tasks = [];
+  List<Developer> _developers = [];
+  List<Manager> _managers = [];
+  List<TaskTypeModel> _taskTypes = [];
+  
+  // Filtros
+  ReportType _selectedReportType = ReportType.completedTasksByManager;
+  String? _selectedManagerId;
+  String? _selectedDeveloperId;
+  String? _selectedStatus;
+  DateTime? _startDate;
+  DateTime? _endDate;
 
-  Future<void> fetchDeveloperReports(String developerId) async {
-    _isLoading = true;
-    notifyListeners();
-    _completedTasksDeveloper = await _firestoreService.getCompletedTasksForDeveloper(developerId);
-    _isLoading = false;
-    notifyListeners();
-  }
+  // Getters
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+  String? get successMessage => _successMessage;
+  List<Task> get tasks => _tasks;
+  List<Developer> get developers => _developers;
+  List<Manager> get managers => _managers;
+  List<TaskTypeModel> get taskTypes => _taskTypes;
+  ReportType get selectedReportType => _selectedReportType;
+  String? get selectedManagerId => _selectedManagerId;
+  String? get selectedDeveloperId => _selectedDeveloperId;
+  String? get selectedStatus => _selectedStatus;
+  DateTime? get startDate => _startDate;
+  DateTime? get endDate => _endDate;
 
-  Future<String> getTodoTimeEstimate(String managerId) async {
-    // TODO: Implementar o algoritmo de estimativa
-    // ...
-    return "Calculando...";
-  }
+  // Estatísticas calculadas
+  Map<String, dynamic> get statistics {
+    if (_tasks.isEmpty) return {};
 
-  Future<void> exportCompletedTasksToCsv(String managerId) async {
-    // 1. Buscar os dados das tarefas concluídas
-    if (_completedTasksManager.isEmpty) {
-      await fetchManagerReports(managerId);
+    final completed = _tasks.where((t) => t.taskStatus == 'Done').length;
+    final ongoing = _tasks.where((t) => t.taskStatus == 'Doing').length;
+    final todo = _tasks.where((t) => t.taskStatus == 'ToDo').length;
+    
+    final totalStoryPoints = _tasks.fold<int>(0, (sum, task) => sum + task.storyPoints);
+    final completedStoryPoints = _tasks
+        .where((t) => t.taskStatus == 'Done')
+        .fold<int>(0, (sum, task) => sum + task.storyPoints);
+
+    // Calcular tempo médio de conclusão
+    final completedWithDates = _tasks.where((t) => 
+      t.taskStatus == 'Done' && 
+      t.realStartDate != null && 
+      t.realEndDate != null
+    ).toList();
+
+    Duration? averageCompletionTime;
+    if (completedWithDates.isNotEmpty) {
+      final totalDuration = completedWithDates.fold<Duration>(
+        Duration.zero,
+        (sum, task) => sum + task.realEndDate!.difference(task.realStartDate!),
+      );
+      averageCompletionTime = Duration(
+        minutes: (totalDuration.inMinutes / completedWithDates.length).round(),
+      );
     }
 
-    // 2. BUSCAR DADOS RELACIONADOS (TODO: implementar)
-    // ...
+    return {
+      'total': _tasks.length,
+      'completed': completed,
+      'ongoing': ongoing,
+      'todo': todo,
+      'totalStoryPoints': totalStoryPoints,
+      'completedStoryPoints': completedStoryPoints,
+      'averageCompletionTime': averageCompletionTime,
+      'completionRate': _tasks.isNotEmpty 
+          ? ((completed / _tasks.length) * 100).toStringAsFixed(1) 
+          : '0.0',
+    };
+  }
 
-    // 3. Formatar os dados para a lista de listas
-    List<List<dynamic>> rows = [];
+  // Métodos de filtro
+  void setReportType(ReportType type) {
+    _selectedReportType = type;
+    notifyListeners();
+  }
 
-    // 3.1. Adicionar Cabeçalhos
-    rows.add([
-      "Description",
-      "Developer", // Nome, não ID
-      "TaskType", // Nome, não ID
-      "Planned Start Date",
-      "Planned End Date",
-      "Real Start Date",
-      "Real End Date",
-      "Planned Time (days)",
-      "Real Time (days)",
-    ]);
+  void setSelectedManager(String? managerId) {
+    _selectedManagerId = managerId;
+    notifyListeners();
+  }
 
-    // 3.2. Adicionar dados de cada tarefa
-    for (var task in _completedTasksManager) {
-      // ... (lógica para buscar nomes)
+  void setSelectedDeveloper(String? developerId) {
+    _selectedDeveloperId = developerId;
+    notifyListeners();
+  }
 
-      // Lógica de cálculo de datas
-      // <-- CORRIGIDO: Removido .toDate()
-      final plannedDays =
-          task.previsionEndDate.difference(task.previsionStartDate).inDays +
-          1; // +1 para incluir o dia de início
+  void setSelectedStatus(String? status) {
+    _selectedStatus = status;
+    notifyListeners();
+  }
 
-      // <-- CORRIGIDO: Datas reais podem ser nulas
-      final hasRealDates =
-          task.realStartDate != null && task.realEndDate != null;
+  void setDateRange(DateTime? start, DateTime? end) {
+    _startDate = start;
+    _endDate = end;
+    notifyListeners();
+  }
 
-      final realDays = hasRealDates
-          ? task
-                    .realEndDate! // <-- Usa ! porque verificámos o null
-                    .difference(task.realStartDate!) // <-- Usa !
-                    .inDays +
-                1 // +1
-          : 0;
+  // Carregar dados iniciais
+  Future<void> loadInitialData() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
 
-      rows.add([
-        task.description,
-        task.idDeveloper.toString(), // Convertido para String
-        task.idTaskType.toString(), // Convertido para String
-        // <-- CORRIGIDO: Removido .toDate()
-        task.previsionStartDate.toLocal().toString().split(' ')[0],
-        task.previsionEndDate.toLocal().toString().split(' ')[0],
-
-        // <-- CORRIGIDO: Removido .toDate() e adicionado !
-        hasRealDates
-            ? task.realStartDate!.toLocal().toString().split(' ')[0]
-            : 'N/A',
-        hasRealDates
-            ? task.realEndDate!.toLocal().toString().split(' ')[0]
-            : 'N/A',
-
-        plannedDays,
-        realDays,
-      ]);
-    }
-
-    // 4. Chamar o CsvService
     try {
-      await _csvService.generateAndShareCsv(rows, "Report_Completed_Tasks.csv");
+      // Carregar em paralelo para ser mais rápido
+      final results = await Future.wait([
+        _firestoreService.getAllDevelopers(),
+        _firestoreService.getAllManagers(),
+        _firestoreService.getTaskTypes(),
+      ]);
+
+      _developers = results[0] as List<Developer>;
+      _managers = results[1] as List<Manager>;
+      _taskTypes = results[2] as List<TaskTypeModel>;
+
+      _isLoading = false;
+      notifyListeners();
     } catch (e) {
-      LoggerService.error("Export error", e);
+      _errorMessage = 'Erro ao carregar dados: $e';
+      _isLoading = false;
+      notifyListeners();
+      LoggerService.error('Error loading initial data', e);
     }
+  }
+
+  // Gerar relatório
+  Future<void> generateReport() async {
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+
+    try {
+      List<Task> allTasks = [];
+
+      // Buscar tasks baseado no tipo de relatório
+      switch (_selectedReportType) {
+        case ReportType.completedTasksByManager:
+          if (_selectedManagerId == null) {
+            throw Exception('Selecione um gestor');
+          }
+          allTasks = await _firestoreService.getCompletedTasksForManager(_selectedManagerId!);
+          break;
+
+        case ReportType.completedTasksByDeveloper:
+          if (_selectedDeveloperId == null) {
+            throw Exception('Selecione um programador');
+          }
+          allTasks = await _firestoreService.getCompletedTasksForDeveloper(_selectedDeveloperId!);
+          break;
+
+        case ReportType.ongoingTasks:
+          if (_selectedManagerId == null) {
+            throw Exception('Selecione um gestor');
+          }
+          allTasks = await _firestoreService.getOngoingTasksForManager(_selectedManagerId!);
+          break;
+
+        case ReportType.allTasks:
+          allTasks = await _firestoreService.getTasks();
+          break;
+
+        case ReportType.tasksByStatus:
+          if (_selectedStatus == null) {
+            throw Exception('Selecione um status');
+          }
+          allTasks = await _firestoreService.getTasks();
+          allTasks = allTasks.where((t) => t.taskStatus == _selectedStatus).toList();
+          break;
+      }
+
+      // Aplicar filtros de data
+      if (_startDate != null) {
+        allTasks = allTasks.where((t) => t.creationDate.isAfter(_startDate!)).toList();
+      }
+      if (_endDate != null) {
+        allTasks = allTasks.where((t) => t.creationDate.isBefore(_endDate!)).toList();
+      }
+
+      _tasks = allTasks;
+      _successMessage = 'Relatório gerado com sucesso! ${allTasks.length} tarefa(s) encontrada(s).';
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      LoggerService.error('Error generating report', e);
+    }
+  }
+
+  // Exportar para CSV
+  Future<String?> exportToCSV() async {
+    if (_tasks.isEmpty) {
+      _errorMessage = 'Não há dados para exportar';
+      notifyListeners();
+      return null;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+
+    try {
+      // Criar mapeamentos de IDs para nomes
+      final developerNames = <int, String>{};
+      for (var dev in _developers) {
+        developerNames[dev.id] = dev.name;
+      }
+
+      final taskTypeNames = <int, String>{};
+      for (var type in _taskTypes) {
+        taskTypeNames[type.id] = type.name;
+      }
+
+      // Exportar
+      final filePath = await _csvService.exportTasksToCSV(
+        tasks: _tasks,
+        developerNames: developerNames,
+        taskTypeNames: taskTypeNames,
+      );
+
+      if (filePath != null) {
+        _successMessage = 'Relatório exportado com sucesso!\n\nArquivo salvo em:\n$filePath';
+        _isLoading = false;
+        notifyListeners();
+        return filePath;
+      } else {
+        throw Exception('Não foi possível salvar o arquivo');
+      }
+    } catch (e) {
+      _errorMessage = 'Erro ao exportar: $e';
+      _isLoading = false;
+      notifyListeners();
+      LoggerService.error('Error exporting CSV', e);
+      return null;
+    }
+  }
+
+  // Exportar estatísticas
+  Future<String?> exportStatistics() async {
+    if (_tasks.isEmpty) {
+      _errorMessage = 'Não há dados para exportar';
+      notifyListeners();
+      return null;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+
+    try {
+      final filePath = await _csvService.exportStatisticsToCSV(
+        statistics: statistics,
+      );
+
+      if (filePath != null) {
+        _successMessage = 'Estatísticas exportadas!\n\nArquivo salvo em:\n$filePath';
+        _isLoading = false;
+        notifyListeners();
+        return filePath;
+      } else {
+        throw Exception('Não foi possível salvar o arquivo');
+      }
+    } catch (e) {
+      _errorMessage = 'Erro ao exportar estatísticas: $e';
+      _isLoading = false;
+      notifyListeners();
+      LoggerService.error('Error exporting statistics', e);
+      return null;
+    }
+  }
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void clearSuccess() {
+    _successMessage = null;
+    notifyListeners();
+  }
+
+  void clearMessages() {
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+  }
+
+  void clearFilters() {
+    _selectedManagerId = null;
+    _selectedDeveloperId = null;
+    _selectedStatus = null;
+    _startDate = null;
+    _endDate = null;
+    _tasks = [];
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
   }
 }

@@ -6,9 +6,7 @@ import 'package:drag_and_drop_lists/drag_and_drop_lists.dart';
 import 'package:itasks/core/models/task_model.dart';
 import 'package:itasks/features/kanban/providers/kanban_provider.dart';
 import 'package:itasks/features/kanban/widgets/kanban_card_widget.dart';
-import 'package:itasks/core/providers/auth_provider.dart'; // <-- Importar o AuthProvider
-
-// TODO: Importar o provider do Tema (ex: ThemeProvider)
+import 'package:itasks/core/providers/auth_provider.dart';
 
 class KanbanScreen extends StatefulWidget {
   const KanbanScreen({super.key});
@@ -22,7 +20,6 @@ class _KanbanScreenState extends State<KanbanScreen> {
   void initState() {
     super.initState();
     // Inicia o carregamento das tarefas assim que o ecrã é construído
-    // Usamos listen: false aqui porque estamos fora do método build
     Provider.of<KanbanProvider>(context, listen: false).fetchTasks();
   }
 
@@ -52,7 +49,6 @@ class _KanbanScreenState extends State<KanbanScreen> {
         }
 
         // 2. Construção das 3 listas (ToDo, Doing, Done)
-        // O provider já nos dá as listas filtradas e ordenadas
         final List<DragAndDropList> kanbanLists = [
           _buildDragList(context, "A Fazer", provider.todoTasks),
           _buildDragList(context, "Em Execução", provider.doingTasks),
@@ -103,23 +99,21 @@ class _KanbanScreenState extends State<KanbanScreen> {
                     ),
                   ],
                 ),
-                // (O 'listHeaderDecoration' foi movido para o _buildDragList)
 
                 // --- A LÓGICA PRINCIPAL ---
-                onItemReorder:
-                    (
-                      int oldItemIndex,
-                      int oldListIndex,
-                      int newItemIndex,
-                      int newListIndex,
-                    ) {
-                      provider.handleTaskMove(
-                        oldItemIndex,
-                        oldListIndex,
-                        newItemIndex,
-                        newListIndex,
-                      );
-                    },
+                onItemReorder: (
+                  int oldItemIndex,
+                  int oldListIndex,
+                  int newItemIndex,
+                  int newListIndex,
+                ) {
+                  provider.handleTaskMove(
+                    oldItemIndex,
+                    oldListIndex,
+                    newItemIndex,
+                    newListIndex,
+                  );
+                },
 
                 // Não precisamos disto (reordenar colunas)
                 onListReorder: (int oldListIndex, int newListIndex) {
@@ -139,28 +133,21 @@ class _KanbanScreenState extends State<KanbanScreen> {
     String title,
     List<Task> tasks,
   ) {
-    // --- INÍCIO DAS CORREÇÕES (da imagem image_ac51a6.png) ---
-
-    // 1. Precisamos do AuthProvider para saber o tipo de utilizador
+    // Precisamos do AuthProvider para saber o tipo de utilizador
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    // 2. Definimos a lógica do isReadOnly
-    final bool isReadOnly = (authProvider.appUser?.type == 'Programador');
+    // Definimos a lógica do isReadOnly
+    final bool isReadOnly = (authProvider.appUser?.type == 'Developer');
 
     return DragAndDropList(
-      // 3. (CORREÇÃO do erro 'listHeaderDecoration')
-      // O nome correto é 'headerDecoration' e fica aqui.
-
-      // --- FIM DAS CORREÇÕES ---
-
       // Header (Título da coluna)
       header: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Text(
           "$title (${tasks.length})", // Mostra o contador de tarefas
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
         ),
       ),
 
@@ -169,14 +156,8 @@ class _KanbanScreenState extends State<KanbanScreen> {
         return DragAndDropItem(
           // O widget do cartão
           child: KanbanCardWidget(
-            // 4. (CORREÇÃO do erro 'key')
-            // A 'key' deve estar no widget do cartão
             key: ValueKey(task.id),
-
-            // 5. (CORREÇÃO do erro 'isReadOnly')
-            // Passamos a variável que definimos em cima
             isReadOnly: isReadOnly,
-
             task: task,
           ),
 
@@ -189,7 +170,6 @@ class _KanbanScreenState extends State<KanbanScreen> {
 
   /// O Menu Lateral com efeito "Glass"
   Widget _buildGlassDrawer(BuildContext context) {
-    // O "Auth" é só para o botão de Logout
     final authProvider = context.watch<AuthProvider>();
 
     return ClipRRect(
@@ -200,9 +180,7 @@ class _KanbanScreenState extends State<KanbanScreen> {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
         child: Drawer(
-          backgroundColor: Theme.of(
-            context,
-          ).scaffoldBackgroundColor.withOpacity(0.7),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.7),
           elevation: 0,
           child: ListView(
             padding: EdgeInsets.zero,
@@ -212,14 +190,39 @@ class _KanbanScreenState extends State<KanbanScreen> {
                   color: Theme.of(context).primaryColor.withOpacity(0.5),
                 ),
                 child: Text(
-                  'Menu (${authProvider.appUser?.name ?? "Utilizador"})', // Mostra o nome do user
+                  'Menu (${authProvider.appUser?.name ?? "Utilizador"})',
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              // O Botão de Toggle (mudar tema)
+
+              // ✅ Item do Kanban (tela atual)
+              ListTile(
+                leading: const Icon(Icons.dashboard),
+                title: const Text('Kanban Board'),
+                selected: true, // Destaca que é a tela atual
+                onTap: () {
+                  Navigator.of(context).pop(); // Só fecha o drawer
+                },
+              ),
+
+              const Divider(),
+
+              // ✅ Link para Relatórios
+              ListTile(
+                leading: const Icon(Icons.analytics),
+                title: const Text('Relatórios'),
+                onTap: () {
+                  Navigator.of(context).pop(); // Fecha o drawer
+                  Navigator.pushNamed(context, '/reports'); // Navega para Reports
+                },
+              ),
+
+              const Divider(),
+
+              // Botão de Toggle (mudar tema)
               ListTile(
                 leading: const Icon(Icons.brightness_6),
                 title: const Text('Mudar Tema'),
@@ -231,28 +234,31 @@ class _KanbanScreenState extends State<KanbanScreen> {
                   },
                 ),
               ),
+
               const Divider(),
+
               // Só mostra estes menus se for Manager
               if (authProvider.appUser?.type == 'Manager') ...[
                 ListTile(
-                  leading: const Icon(Icons.settings),
+                  leading: const Icon(Icons.category),
                   title: const Text('Tipos de Tarefa'),
                   onTap: () {
-                    Navigator.of(context).pop(); // Fecha o drawer
-                    // TODO: Navigator.pushNamed(context, '/task_types');
+                    Navigator.of(context).pop();
+                    Navigator.pushNamed(context, '/task_types');
                   },
                 ),
                 ListTile(
                   leading: const Icon(Icons.people),
                   title: const Text('Gestão de Utilizadores'),
                   onTap: () {
-                    Navigator.of(context).pop(); // Fecha o drawer
-                    // TODO: Navigator.pushNamed(context, '/user_list');
+                    Navigator.of(context).pop();
+                    Navigator.pushNamed(context, '/user_management');
                   },
                 ),
                 const Divider(),
               ],
-              // TODO: Adicionar os Relatórios
+
+              // Logout
               ListTile(
                 leading: Icon(Icons.logout, color: Colors.red.shade400),
                 title: Text(
@@ -261,7 +267,7 @@ class _KanbanScreenState extends State<KanbanScreen> {
                 ),
                 onTap: () {
                   context.read<AuthProvider>().signOut();
-                  Navigator.of(context).pop(); // Fecha o drawer
+                  Navigator.of(context).pop();
                 },
               ),
             ],

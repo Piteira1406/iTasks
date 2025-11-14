@@ -145,6 +145,11 @@ class FirestoreService {
     });
   }
 
+  Future<List<Task>> getTasks() async {
+    final querySnapshot = await _db.collection(tasksCollection).get();
+    return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
+  }
+
   Future<void> updateTaskState(String taskId, String newState) async {
     await _db.collection(tasksCollection).doc(taskId).update({
       'taskStatus': newState,
@@ -219,7 +224,7 @@ class FirestoreService {
   }
 
   Future<void> updateManager(Manager manager) async {
-    await _db.collection(managersCollection).doc(manager.id).update(manager.toMap());
+    await _db.collection(managersCollection).doc(manager.id.toString()).update(manager.toMap());
   }
 
   Future<void> deleteManager(String managerId) async {
@@ -227,11 +232,21 @@ class FirestoreService {
   }
 
   Future<void> updateDeveloper(Developer developer) async {
-    await _db.collection(developersCollection).doc(developer.id).update(developer.toMap());
+    await _db.collection(developersCollection).doc(developer.id.toString()).update(developer.toMap());
   }
 
   Future<void> deleteDeveloper(String developerId) async {
     await _db.collection(developersCollection).doc(developerId).delete();
+  }
+
+  Future<List<Manager>> getAllManagers() async {
+    final querySnapshot = await _db.collection(managersCollection).get();
+    return querySnapshot.docs.map((doc) => Manager.fromFirestore(doc)).toList();
+  }
+
+  Future<List<Developer>> getAllDevelopers() async {
+    final querySnapshot = await _db.collection(developersCollection).get();
+    return querySnapshot.docs.map((doc) => Developer.fromFirestore(doc)).toList();
   }
 
   // --- TASK TYPES ---
@@ -249,14 +264,16 @@ class FirestoreService {
     });
   }
 
+  Future<List<TaskTypeModel>> getTaskTypes() async {
+    final querySnapshot = await _db.collection(taskTypesCollection).get();
+    return querySnapshot.docs.map((doc) => TaskTypeModel.fromFirestore(doc)).toList();
+  }
+
   Future<void> updateTaskType(TaskTypeModel taskType) async {
-    // Usa o ID do modelo para saber qual documento atualizar
     await _db
-        .collection(
-          taskTypesCollection,
-        ) // <-- CORRIGIDO: de 'TaskType' para a constante
-        .doc(taskType.id)
-        .update(taskType.toMap());
+      .collection(taskTypesCollection)
+      .doc(taskType.id.toString())  // Adicione .toString()
+      .update(taskType.toMap());
   }
 
   Future<void> deleteTaskType(String taskTypeId) async {
