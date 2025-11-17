@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:provider/provider.dart';
+
 import 'package:itasks/core/widgets/custom_button.dart';
 import 'package:itasks/core/widgets/custom_text_field.dart';
 
@@ -9,20 +9,16 @@ import 'package:itasks/core/models/app_user_model.dart';
 import 'package:itasks/core/models/manager_model.dart';
 import 'package:itasks/core/models/developer_model.dart';
 import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
-import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
 
 // Constantes baseadas no enunciado
-enum UserRole {
-  programador,
-  manager,
-} // Mudei 'gestor' para 'manager' para bater certo com a BD
+enum UserRole { programador, manager }
 
 enum NivelExperiencia { junior, pleno, senior }
 
 enum Departamento { mobile, web, qa, design }
 
 class UserEditScreen extends StatefulWidget {
-  final AppUser? user; // Tipado corretamente
+  final AppUser? user; // Se null, é criação. Se não, é edição.
 
   const UserEditScreen({super.key, this.user});
 
@@ -36,11 +32,9 @@ class _UserEditScreenState extends State<UserEditScreen> {
   // Controladores
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
-  final _emailController =
-      TextEditingController(); // Adicionei controlador de email separado se necessário, ou usa-se o username
   final _passwordController = TextEditingController();
 
-  // Estado dos Dropdowns
+  // Estado dos Dropdowns (Valores por defeito)
   UserRole _selectedRole = UserRole.programador;
   NivelExperiencia _selectedNivel = NivelExperiencia.junior;
   Departamento _selectedDepartamento = Departamento.mobile;
@@ -60,7 +54,9 @@ class _UserEditScreenState extends State<UserEditScreen> {
     if (_isEditing) {
       _nameController.text = widget.user!.name;
       _usernameController.text = widget.user!.username;
-      _emailController.text = widget.user!.email;
+
+      // Se o email for diferente do username no teu modelo, ajusta aqui:
+      // _emailController.text = widget.user!.email;
 
       // Preencher o tipo
       if (widget.user!.type == 'Manager') {
@@ -69,8 +65,9 @@ class _UserEditScreenState extends State<UserEditScreen> {
         _selectedRole = UserRole.programador;
       }
 
-      // TODO: Para edição completa, precisaríamos de buscar os dados extra
-      // (Departamento do Manager ou Nivel/Gestor do Developer) à BD.
+      // TODO: Se fosse edição completa, terias de ir buscar
+      // os dados específicos do Developer/Manager à BD para preencher
+      // o Nível ou o Departamento.
     }
   }
 
@@ -78,7 +75,6 @@ class _UserEditScreenState extends State<UserEditScreen> {
   void dispose() {
     _nameController.dispose();
     _usernameController.dispose();
-    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -95,44 +91,46 @@ class _UserEditScreenState extends State<UserEditScreen> {
     );
 
     // 1. Preparar os objetos
-    // Converter Enum para String que a BD espera ('Programador' ou 'Manager')
     String typeString = _selectedRole == UserRole.manager
         ? 'Manager'
-        : 'Programador'; // ou 'Developer' se preferires
+        : 'Programador';
 
+    // --- CRIAÇÃO DO APPUSER ---
     final appUserTemplate = AppUser(
-      id: 0, // Irrelevante na criação
+      // NOTA: Usamos 0 porque o teu modelo AppUser exige int.
+      // O Provider vai substituir isto pelo UID correto se ajustaste o modelo,
+      // ou vai ignorar se for auto-gerado.
+      id: 0,
       name: _nameController.text.trim(),
       username: _usernameController.text.trim(),
-      email: _usernameController.text
-          .trim(), // Assumindo que username é email, senão usa _emailController
+      email: _usernameController.text.trim(), // Assumindo username = email
       type: typeString,
     );
 
     Manager? managerObj;
     Developer? devObj;
 
+    // --- CRIAÇÃO DOS OBJETOS ESPECÍFICOS ---
     if (_selectedRole == UserRole.manager) {
       managerObj = Manager(
-        id: "",
+        id: '', // String vazia (Firestore gera). Se o teu model for int, muda para 0.
         name: _nameController.text,
         department: _enumToString(_selectedDepartamento),
-        idUser: '',
+        idUser: '', // O provider vai preencher isto com o UID
       );
     } else {
       devObj = Developer(
-        id: "",
+        id: '', // String vazia (Firestore gera). Se o teu model for int, muda para 0.
         name: _nameController.text,
         experienceLevel: _enumToString(_selectedNivel),
-        idManager:
-            _selectedManagerId ?? '', // Pode ser vazio se não tiver gestor
-        idUser: '',
+        idManager: _selectedManagerId ?? '', // ID do gestor selecionado
+        idUser: '', // O provider vai preencher isto com o UID
       );
     }
 
     // 2. Chamar o Provider
     final error = await provider.createNewUser(
-      email: _usernameController.text.trim(), // Usando username como email
+      email: _usernameController.text.trim(),
       password: _passwordController.text.trim(),
       appUser: appUserTemplate,
       manager: managerObj,
@@ -143,13 +141,11 @@ class _UserEditScreenState extends State<UserEditScreen> {
 
     // 3. Tratar a resposta
     if (error == null) {
-      // Sucesso
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Utilizador criado com sucesso!')),
       );
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(); // Fecha o ecrã
     } else {
-      // Erro
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error), backgroundColor: Colors.red),
       );
@@ -249,7 +245,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
 
   // Passamos o provider como argumento para aceder à lista de users
   List<Widget> _buildDeveloperFields(UserManagementProvider provider) {
-    // FILTRO REAL: Buscar apenas quem é 'Manager'
+    // FILTRO REAL: Buscar apenas quem é 'Manager' na lista de users
     final managersList = provider.users
         .where((u) => u.type == 'Manager')
         .toList();
@@ -281,14 +277,24 @@ class _UserEditScreenState extends State<UserEditScreen> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           prefixIcon: const Icon(Icons.supervisor_account),
         ),
+        // Mapeia a lista de managers para DropdownItems
         items: managersList.map((manager) {
           return DropdownMenuItem(
+            // .toString() garante que funciona mesmo se o ID for int ou String
             value: manager.id.toString(),
             child: Text(manager.name),
           );
         }).toList(),
         onChanged: (value) => setState(() => _selectedManagerId = value),
-        validator: (val) => val == null ? 'Selecione um gestor' : null,
+        validator: (val) {
+          if (managersList.isEmpty) return 'Crie um Manager primeiro!';
+          if (val == null) return 'Selecione um gestor';
+          return null;
+        },
+        // Desabilita o campo se não houver managers
+        disabledHint: managersList.isEmpty
+            ? const Text("Nenhum Manager disponível")
+            : null,
       ),
     ];
   }
@@ -314,6 +320,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
 // Extensão simples para meter a primeira letra maiúscula
 extension StringExtension on String {
   String capitalize() {
+    if (isEmpty) return this;
     return "${this[0].toUpperCase()}${substring(1)}";
   }
 }

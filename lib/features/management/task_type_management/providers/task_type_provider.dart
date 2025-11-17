@@ -22,35 +22,35 @@ class TaskTypeProvider extends ChangeNotifier {
   String _errorMessage = '';
   String get errorMessage => _errorMessage;
 
-  List<TaskTypeModel> _taskTypes = [];
-  List<TaskTypeModel> get taskTypes => List.unmodifiable(_taskTypes);
+  List<TaskType> _taskTypesList = [];
+  List<TaskType> get taskTypes => _taskTypesList;
 
   // 1. Buscar dados (AGORA USA O STREAM)
-  void fetchTaskTypes() {
+  Future<void> fetchTaskTypes() async {
     _setState(TaskTypeState.loading);
 
-    _taskTypeSubscription?.cancel(); // Cancela qualquer 'listener' antigo
-    _taskTypeSubscription = _firestoreService.getTaskTypesStream().listen(
-      (data) {
-        _taskTypes = data; // Atualiza a lista com os dados do stream
-        _setState(TaskTypeState.idle);
-      },
-      onError: (e) {
-        _setError(e.toString());
-      },
-    );
+    try {
+      // 2. Em vez de .listen(), usamos 'await' para esperar pela resposta
+      // Nota: Não precisas da variável '_taskTypeSubscription' aqui
+      final data = await _firestoreService.getTaskTypes();
+
+      _taskTypesList = data; // Guarda os dados
+      _setState(TaskTypeState.idle); // Tira o loading
+    } catch (e) {
+      _setError(e.toString());
+    }
   }
 
   // 2. Adicionar/Atualizar dados
   Future<bool> saveTaskType({
-    TaskTypeModel? existingTaskType,
+    TaskType? existingTaskType,
     required String name,
   }) async {
     _setState(TaskTypeState.loading);
     try {
       if (existingTaskType == null) {
         // --- Criar Novo ---
-        final newTask = TaskTypeModel(id: '', name: name);
+        final newTask = TaskType(id: '', name: name);
         // Chama o método correto do serviço
         await _firestoreService.createTaskType(newTask);
       } else {

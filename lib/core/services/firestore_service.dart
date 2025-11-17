@@ -193,20 +193,25 @@ class FirestoreService {
 
   // --- TASK TYPES ---
 
-  Future<void> createTaskType(TaskTypeModel taskType) async {
+  Future<void> createTaskType(TaskType taskType) async {
     await _db.collection(taskTypesCollection).add(taskType.toMap());
   }
 
-  Stream<List<TaskTypeModel>> getTaskTypesStream() {
-    // <-- CORRIGIDO: de 'TaskTypeModel' para 'TaskType'
-    return _db.collection(taskTypesCollection).snapshots().map((snapshot) {
-      return snapshot.docs
-          .map((doc) => TaskTypeModel.fromFirestore(doc))
-          .toList();
-    });
+  Future<List<TaskType>> getTaskTypes() async {
+    try {
+      // Atenção: Verifica se no Firebase a coleção chama-se "TaskTypes" ou "task_types"
+      QuerySnapshot snapshot = await _db.collection('TaskTypes').get();
+
+      return snapshot.docs.map((doc) {
+        return TaskType.fromFirestore(doc);
+      }).toList();
+    } catch (e) {
+      print('Erro ao buscar TaskTypes: $e');
+      return [];
+    }
   }
 
-  Future<void> updateTaskType(TaskTypeModel taskType) async {
+  Future<void> updateTaskType(TaskType taskType) async {
     // Usa o ID do modelo para saber qual documento atualizar
     await _db
         .collection(

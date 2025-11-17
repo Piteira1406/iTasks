@@ -2,20 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:itasks/core/services/firestore_service.dart';
 import 'package:itasks/core/services/logger_service.dart';
 import 'package:itasks/core/models/task_model.dart';
-import 'package:itasks/core/models/app_user_model.dart'; // <--- Importante
-// Certifica-te que tens um model TaskType, ou usa Map se não tiveres
-// import 'package:itasks/core/models/task_type_model.dart';
+import 'package:itasks/core/models/app_user_model.dart';
+import 'package:itasks/core/models/task_type_model.dart'; // <--- Importante
 
 class TaskDetailsProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
 
   // --- Listas para os Dropdowns ---
   List<AppUser> _developersList = [];
-  List<dynamic> _taskTypesList =
-      []; // Usa o teu modelo TaskType aqui se tiveres
+
+  // CORREÇÃO: Agora é uma Lista de TaskType, não dynamic
+  List<TaskType> _taskTypesList = [];
 
   List<AppUser> get developersList => _developersList;
-  List<dynamic> get taskTypesList => _taskTypesList;
+
+  // CORREÇÃO: O getter também devolve List<TaskType>
+  List<TaskType> get taskTypesList => _taskTypesList;
 
   // --- Estado do Formulário ---
   String _description = '';
@@ -43,20 +45,12 @@ class TaskDetailsProvider with ChangeNotifier {
   Future<void> loadDropdownData() async {
     try {
       // Buscar utilizadores que são 'Programador'
-      // Nota: O firestoreService precisa de ter um método getAllUsers ou similar
       final allUsers = await _firestoreService.getUsers();
       _developersList = allUsers.where((u) => u.type == 'Programador').toList();
 
-      // Buscar Tipos de Tarefa
-      // Se ainda não tiveres o metodo getTaskTypes, cria no FirestoreService
-      // _taskTypesList = await _firestoreService.getTaskTypes();
-
-      // MOCK (Temporário enquanto não tens TaskTypes na DB):
-      _taskTypesList = [
-        {'id': 'bug', 'name': 'Bug Fix'},
-        {'id': 'feature', 'name': 'Nova Feature'},
-        {'id': 'melhoria', 'name': 'Melhoria'},
-      ];
+      // Buscar Tipos de Tarefa REAIS da BD
+      // O teu FirestoreService já deve ter este método a devolver List<TaskType>
+      _taskTypesList = await _firestoreService.getTaskTypes();
 
       notifyListeners();
     } catch (e) {
@@ -123,7 +117,7 @@ class TaskDetailsProvider with ChangeNotifier {
     }
 
     final taskToSave = Task(
-      id: existingTaskId ?? '', // Se for null, o Firestore cria ID novo
+      id: existingTaskId ?? '',
       description: _description,
       storyPoints: _storyPoints,
       order: _executionOrder,
@@ -142,7 +136,8 @@ class TaskDetailsProvider with ChangeNotifier {
       if (existingTaskId == null) {
         await _firestoreService.createTask(taskToSave);
       } else {
-        // await _firestoreService.updateTask(taskToSave); // Precisas criar este método se não existir
+        // TODO: Implementar updateTask se necessário
+        // await _firestoreService.updateTask(taskToSave);
       }
 
       _isLoading = false;

@@ -166,8 +166,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                         // Aqui assumimos que a lista tem Maps. Ajusta se usares Models.
                         items: provider.taskTypesList.map((type) {
                           return DropdownMenuItem<String>(
-                            value: type['id'], // ou type.id se for Model
-                            child: Text(type['name']), // ou type.name
+                            value: type.id, // ou type.id se for Model
+                            child: Text(type.name), // ou type.name
                           );
                         }).toList(),
                         onChanged: widget.isReadOnly

@@ -30,7 +30,7 @@ class _TaskTypeScreenState extends State<TaskTypeScreen> {
   }
 
   // Função do Pop-up (agora usa o Provider)
-  void _showEditDialog(BuildContext context, {TaskTypeModel? taskType}) {
+  void _showEditDialog(BuildContext context, {TaskType? taskType}) {
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -56,7 +56,7 @@ class _TaskTypeScreenState extends State<TaskTypeScreen> {
   }
 
   // Função de Apagar (agora usa o Provider)
-  void _deleteType(TaskTypeModel taskType) {
+  void _deleteType(TaskType taskType) {
     // TODO: Mostrar um diálogo de confirmação "Tem a certeza?"
 
     // Usa o Provider para apagar
