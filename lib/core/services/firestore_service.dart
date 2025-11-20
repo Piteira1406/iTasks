@@ -202,6 +202,25 @@ class FirestoreService {
     return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
   }
 
+  /// Get completed tasks for calculating StoryPoints average
+  Future<List<Task>> getCompletedTasks() async {
+    final querySnapshot = await _db
+        .collection(tasksCollection)
+        .where('taskStatus', isEqualTo: 'Done')
+        .get();
+    return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
+  }
+
+  /// Get ToDo tasks for a specific developer
+  Future<List<Task>> getTodoTasksByDeveloper(int developerId) async {
+    final querySnapshot = await _db
+        .collection(tasksCollection)
+        .where('idDeveloper', isEqualTo: developerId)
+        .where('taskStatus', isEqualTo: 'ToDo')
+        .get();
+    return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
+  }
+
   // --- USERS ---
 
   Stream<List<AppUser>> getUsersStream() {

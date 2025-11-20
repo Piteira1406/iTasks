@@ -30,6 +30,13 @@ class ReportProvider extends ChangeNotifier {
   List<Manager> _managers = [];
   List<TaskTypeModel> _taskTypes = [];
   
+  // StoryPoints estimation
+  double _averageHoursPerStoryPoint = 0.0;
+  double _estimatedHoursForTodo = 0.0;
+
+  double get averageHoursPerStoryPoint => _averageHoursPerStoryPoint;
+  double get estimatedHoursForTodo => _estimatedHoursForTodo;
+  
   // Filtros
   ReportType _selectedReportType = ReportType.completedTasksByManager;
   String? _selectedManagerId;
@@ -329,5 +336,97 @@ class ReportProvider extends ChangeNotifier {
     _errorMessage = null;
     _successMessage = null;
     notifyListeners();
+  }
+
+  /// Calculate average time per StoryPoint from completed tasks
+  Future<void> calculateStoryPointsAverage() async {
+    try {
+      final completedTasks = await _firestoreService.getCompletedTasks();
+      
+      double totalHours = 0;
+      int totalStoryPoints = 0;
+      int validTasksCount = 0;
+      
+      for (var task in completedTasks) {
+        // Only count tasks with real dates and storyPoints > 0
+        if (task.realStartDate != null && 
+            task.realEndDate != null && 
+            task.storyPoints > 0) {
+          
+          final duration = task.realEndDate!.difference(task.realStartDate!);
+          final hours = duration.inHours.toDouble();
+          
+          totalHours += hours;
+          totalStoryPoints += task.storyPoints;
+          validTasksCount++;
+        }
+      }
+      
+      // Calculate average (avoid division by zero)
+      _averageHoursPerStoryPoint = totalStoryPoints > 0 
+          ? totalHours / totalStoryPoints 
+          : 0.0;
+      
+      LoggerService.info(
+        'StoryPoints Average calculated: $_averageHoursPerStoryPoint hours/SP from $validTasksCount tasks'
+      );
+      
+      notifyListeners();
+    } catch (e) {
+      LoggerService.error('Error calculating StoryPoints average', e);
+      _averageHoursPerStoryPoint = 0.0;
+    }
+  }
+
+  /// Calculate estimated time for all ToDo tasks of a developer
+  Future<void> calculateEstimatedTimeForTodo(int developerId) async {
+    try {
+      // First ensure we have the average
+      if (_averageHoursPerStoryPoint == 0.0) {
+        await calculateStoryPointsAverage();
+      }
+      
+      // Get ToDo tasks
+      final todoTasks = await _firestoreService.getTodoTasksByDeveloper(developerId);
+      
+      // Sum all StoryPoints from ToDo tasks
+      int totalStoryPoints = todoTasks.fold(
+        0, 
+        (sum, task) => sum + task.storyPoints
+      );
+      
+      // Calculate estimated time
+      _estimatedHoursForTodo = _averageHoursPerStoryPoint * totalStoryPoints;
+      
+      LoggerService.info(
+        'Estimated time for developer $developerId: $_estimatedHoursForTodo hours ($totalStoryPoints SP)'
+      );
+      
+      notifyListeners();
+    } catch (e) {
+      LoggerService.error('Error calculating estimated time for ToDo', e);
+      _estimatedHoursForTodo = 0.0;
+    }
+  }
+
+  /// Get formatted estimation text for UI
+  String getEstimationText() {
+    if (_estimatedHoursForTodo == 0.0) {
+      return 'Sem estimativa disponível';
+    }
+    
+    final days = (_estimatedHoursForTodo / 8).ceil(); // 8 hours per day
+    final hours = _estimatedHoursForTodo.toInt();
+    
+    return '$hours horas (~$days dias úteis)';
+  }
+
+  /// Get average time per StoryPoint formatted
+  String getAverageText() {
+    if (_averageHoursPerStoryPoint == 0.0) {
+      return 'Sem dados históricos';
+    }
+    
+    return '${_averageHoursPerStoryPoint.toStringAsFixed(1)} horas/SP';
   }
 }
