@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 // Importe os seus widgets
 import 'package:itasks/core/widgets/custom_button.dart';
 import 'package:itasks/core/widgets/custom_text_field.dart';
+import 'package:itasks/features/kanban/providers/task_provider.dart';
+import 'package:itasks/core/providers/auth_provider.dart';
 import 'package:itasks/features/management/task_type_management/providers/task_type_provider.dart';
 import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
 
@@ -55,10 +57,47 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     super.dispose();
   }
 
-  void _saveForm() {
+  void _saveForm() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Chamar o Provider para salvar a tarefa
-      Navigator.of(context).pop();
+      final taskProvider = context.read<TaskDetailsProvider>();
+      final authProvider = context.read<AuthProvider>();
+      
+      final managerId = authProvider.managerProfile?.id ?? 0;
+      
+      if (managerId == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro: Gestor não identificado'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
+      // Call saveTask with error callback
+      final success = await taskProvider.saveTask(
+        managerId,
+        errorCallback: (errorMessage) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+          return null;
+        },
+      );
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tarefa criada com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop();
+      }
     }
   }
 
