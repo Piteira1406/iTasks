@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import 'package:itasks/features/reports/providers/report_provider.dart';
 import 'package:itasks/features/reports/widgets/report_filters.dart';
 import 'package:itasks/features/reports/widgets/statistics_cards.dart';
@@ -179,9 +178,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               children: [
                                 Text(
                                   'Tarefas (${reportProvider.tasks.length})',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                                 Chip(
                                   label: Text(
@@ -215,9 +213,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           const SizedBox(height: 16),
                           Text(
                             'Nenhum relatório gerado',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  color: Colors.grey.shade600,
-                                ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(color: Colors.grey.shade600),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -261,10 +258,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    message,
-                    style: TextStyle(color: Colors.green.shade700),
-                  ),
+                  Text(message, style: TextStyle(color: Colors.green.shade700)),
                 ],
               ),
             ),
@@ -302,10 +296,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    message,
-                    style: TextStyle(color: Colors.red.shade700),
-                  ),
+                  Text(message, style: TextStyle(color: Colors.red.shade700)),
                 ],
               ),
             ),

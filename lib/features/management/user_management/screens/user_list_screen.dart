@@ -1,12 +1,10 @@
 // features/management/user_management/screens/user_list_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 // Importe os seus widgets e o próximo ecrã
 // (Lembre-se de usar o nome do seu projeto, ex: 'itasks')
 import 'package:itasks/core/widgets/glass_card.dart';
 import 'package:itasks/features/management/user_management/screens/user_edit_screen.dart';
-import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
 // (Opcional, se quiser usar a sua appbar)
 // import 'package:itasks/core/widgets/scroll_frost_appbar.dart';
 
@@ -38,34 +36,45 @@ class UserListScreen extends StatelessWidget {
         onPressed: () => _navigateToEditScreen(context), // Criar novo
         child: Icon(Icons.add),
       ),
-      body: Consumer<UserManagementProvider>(
-        builder: (context, userManagementProvider, child) {
-          if (userManagementProvider.isLoading) {
-            return Center(child: CircularProgressIndicator());
-          }
-
-          final users = userManagementProvider.users;
-
-          if (users.isEmpty) {
-            return Center(
-              child: Text('Nenhum utilizador encontrado'),
-            );
-          }
-
-          return _buildUserList(context, users);
-        },
-      ),
+      body: _buildUserList(context), // Mostra a lista "mockada"
     );
   }
 
-  // Widget para mostrar a lista de utilizadores
-  Widget _buildUserList(BuildContext context, List users) {
+  // Widget temporário com dados falsos para design
+  Widget _buildUserList(BuildContext context) {
+    // Dados falsos (DEVE ser substituído pelo Provider)
+    final List<Map<String, dynamic>> mockUsers = [
+      {
+        'id': 'gestor1',
+        'name': 'Ana Silva',
+        'email': 'ana.silva@itasks.com',
+        'role': 'Gestor',
+        'departamento': 'Mobile',
+      },
+      {
+        'id': 'dev1',
+        'name': 'Bruno Costa',
+        'email': 'bruno.costa@itasks.com',
+        'role': 'Programador',
+        'nivel': 'Pleno',
+        'gestorId': 'gestor1',
+      },
+      {
+        'id': 'dev2',
+        'name': 'Carla Dias',
+        'email': 'carla.dias@itasks.com',
+        'role': 'Programador',
+        'nivel': 'Júnior',
+        'gestorId': 'gestor1',
+      },
+    ];
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: users.length,
+      itemCount: mockUsers.length,
       itemBuilder: (context, index) {
-        final user = users[index];
-        final isManager = user.type == 'Manager';
+        final user = mockUsers[index];
+        final isManager = user['role'] == 'Gestor';
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
@@ -76,8 +85,8 @@ class UserListScreen extends StatelessWidget {
                 isManager ? Icons.manage_accounts : Icons.person_outline,
                 size: 40,
               ),
-              title: Text(user.name),
-              subtitle: Text('${user.type} | ${user.email}'),
+              title: Text(user['name']),
+              subtitle: Text('${user['role']} | ${user['email']}'),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
