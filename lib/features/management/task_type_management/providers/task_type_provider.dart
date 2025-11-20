@@ -72,11 +72,12 @@ class TaskTypeProvider extends ChangeNotifier {
   }
 
   // 3. Apagar dados
-  Future<void> deleteTaskType(String id) async {
+  Future<void> deleteTaskType(int id) async {
     _setState(TaskTypeState.loading);
     try {
       // Chama o método que adicionámos ao serviço
-      await _firestoreService.deleteTaskType(id);
+      // Converte int para String para o Firestore
+      await _firestoreService.deleteTaskType(id.toString());
       // O Stream vai atualizar a lista automaticamente
       _setState(TaskTypeState.idle);
     } catch (e) {
