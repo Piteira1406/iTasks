@@ -99,8 +99,8 @@ class TaskDetailsProvider with ChangeNotifier {
       creationDate: DateTime.now(),
       previsionStartDate: _plannedStartDate,
       previsionEndDate: _plannedEndDate,
-      realStartDate: DateTime(1970), // Placeholder para Timestamp não-nulo
-      realEndDate: DateTime(1970), // Placeholder para Timestamp não-nulo
+      realStartDate: null,
+      realEndDate: null,
     );
 
     try {
