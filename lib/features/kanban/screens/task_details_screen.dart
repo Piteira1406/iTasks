@@ -285,7 +285,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       decoration: InputDecoration(
         labelText: 'Tipo de Tarefa',
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        prefixIcon: Icon(Icons.label),
+        prefixIcon: const Icon(Icons.category),
+        enabled: !widget.isReadOnly,
       ),
       items: taskTypes.map((type) {
         return DropdownMenuItem(
@@ -293,8 +294,21 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           child: Text(type.name),
         );
       }).toList(),
-      onChanged: widget.isReadOnly ? null : (val) => setState(() => _selectedTaskTypeId = val),
-      validator: (val) => val == null ? 'Campo obrigatório' : null,
+      onChanged: widget.isReadOnly 
+          ? null 
+          : (val) {
+              if (val != null) {
+                setState(() {
+                  _selectedTaskTypeId = val;
+                });
+              }
+            },
+      validator: (val) {
+        if (!widget.isReadOnly && val == null) {
+          return 'Selecione um tipo de tarefa';
+        }
+        return null;
+      },
     );
   }
 
@@ -306,9 +320,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     return DropdownButtonFormField<int>(
       value: _selectedDeveloperId,
       decoration: InputDecoration(
-        labelText: 'Atribuir a Programador',
+        labelText: 'Programador Responsável',
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        prefixIcon: Icon(Icons.person),
+        prefixIcon: const Icon(Icons.person),
+        enabled: !widget.isReadOnly,
       ),
       items: developers.map((dev) {
         return DropdownMenuItem(
@@ -316,15 +331,21 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           child: Text(dev.name),
         );
       }).toList(),
-      onChanged: widget.isReadOnly ? null : onChanged, // Bloqueado se ReadOnly
+      onChanged: widget.isReadOnly 
+          ? null 
+          : (val) {
+              if (val != null) {
+                setState(() {
+                  _selectedDeveloperId = val;
+                });
+              }
+            },
       validator: (val) {
-        if (val == null) {
-          return 'Selecione uma opção';
+        if (!widget.isReadOnly && val == null) {
+          return 'Selecione um programador';
         }
         return null;
       },
-      onChanged: widget.isReadOnly ? null : (val) => setState(() => _selectedDeveloperId = val),
-      validator: (val) => val == null ? 'Campo obrigatório' : null,
     );
   }
 
