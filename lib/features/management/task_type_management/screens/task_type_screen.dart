@@ -119,7 +119,7 @@ class _TaskTypeScreenState extends State<TaskTypeScreen> {
                           child: ListTile(
                             title: Text(task.name),
                             subtitle: Text(
-                              task.id,
+                              task.id.toString(),
                             ), // Mostra o ID real do Firestore
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,

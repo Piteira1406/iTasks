@@ -44,6 +44,15 @@ class _UserEditScreenState extends State<UserEditScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // Fetch managers if editing a developer or creating new user
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userManagementProvider = context.read<UserManagementProvider>();
+      
+      // Load managers for dropdown
+      userManagementProvider.fetchManagers();
+    });
+    
     if (_isEditing) {
       // TODO: Preencher os controladores com os dados do 'widget.user'
       // Ex: _nameController.text = widget.user['name'];
@@ -233,29 +242,29 @@ class _UserEditScreenState extends State<UserEditScreen> {
       ),
       const SizedBox(height: 16),
       DropdownButtonFormField<int>(
-        initialValue: _selectedManagerId,
-        hint: Text('Selecionar Gestor'),
+        value: _selectedManagerId,
         decoration: InputDecoration(
-          labelText: 'Gestor Responsável *',
+          labelText: 'Gestor Responsável',
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          prefixIcon: Icon(Icons.supervisor_account),
+          prefixIcon: const Icon(Icons.supervisor_account),
         ),
+        items: managers
+            .map((manager) => DropdownMenuItem<int>(
+                  value: manager.id,
+                  child: Text(manager.name),
+                ))
+            .toList(),
+        onChanged: (value) {
+          if (value != null) {
+            setState(() => _selectedManagerId = value);
+          }
+        },
         validator: (value) {
           if (value == null) {
-            return 'Selecione um gestor responsável';
+            return 'Selecione um gestor';
           }
           return null;
         },
-        items: mockManagers.entries
-        items: managers
-            .map(
-              (manager) => DropdownMenuItem(
-                value: manager.id,
-                child: Text(manager.name),
-              ),
-            )
-            .toList(),
-        onChanged: (value) => setState(() => _selectedManagerId = value),
       ),
     ];
   }
