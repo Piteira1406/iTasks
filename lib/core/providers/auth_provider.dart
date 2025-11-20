@@ -74,7 +74,6 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> signIn(String email, String password, String trim) async {
   // CORRIGIDO: Devolve String? de erro em vez de bool
   Future<String?> signIn(String email, String password) async {
     try {
