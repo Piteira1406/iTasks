@@ -20,7 +20,10 @@ class _KanbanScreenState extends State<KanbanScreen> {
   void initState() {
     super.initState();
     // Inicia o carregamento das tarefas assim que o ecrã é construído
-    Provider.of<KanbanProvider>(context, listen: false).fetchTasks();
+    // Usar addPostFrameCallback para evitar setState durante build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<KanbanProvider>(context, listen: false).fetchTasks();
+    });
   }
 
   @override
@@ -32,6 +35,23 @@ class _KanbanScreenState extends State<KanbanScreen> {
         title: const Text('iTasks Kanban'),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_task),
+            onPressed: () {
+              // Navigate to create task
+              Navigator.pushNamed(context, '/task_details');
+            },
+            tooltip: 'Nova Tarefa',
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<KanbanProvider>().fetchTasks();
+            },
+            tooltip: 'Atualizar',
+          ),
+        ],
       ),
       drawer: _buildGlassDrawer(context), // O Menu lateral
       body: _buildKanbanBody(),
@@ -43,19 +63,124 @@ class _KanbanScreenState extends State<KanbanScreen> {
     // O Consumer reage às mudanças no KanbanProvider (loading, listas, erros)
     return Consumer<KanbanProvider>(
       builder: (context, provider, child) {
-        // 1. Estado de Loading
-        if (provider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+        // 1. Better error handling - show error UI if there's an error
+        if (provider.errorMessage.isNotEmpty && 
+            provider.todoTasks.isEmpty && 
+            provider.doingTasks.isEmpty && 
+            provider.doneTasks.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Erro ao carregar tarefas',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    provider.errorMessage,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.red.shade700,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    provider.fetchTasks();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Tentar Novamente'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () {
+                    // Log error details for debugging
+                    print('Error details: ${provider.errorMessage}');
+                  },
+                  child: const Text('Ver Detalhes do Erro'),
+                ),
+              ],
+            ),
+          );
         }
 
-        // 2. Construção das 3 listas (ToDo, Doing, Done)
+        // 2. Better loading state - show loading indicator with text
+        if (provider.isLoading && 
+            provider.todoTasks.isEmpty && 
+            provider.doingTasks.isEmpty && 
+            provider.doneTasks.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  'A carregar tarefas...',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ],
+            ),
+          );
+        }
+
+        // 3. Empty state - show helpful message when no tasks exist
+        if (provider.todoTasks.isEmpty &&
+            provider.doingTasks.isEmpty &&
+            provider.doneTasks.isEmpty &&
+            !provider.isLoading) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.task_alt,
+                  size: 80,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Nenhuma tarefa encontrada',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Crie a primeira tarefa para começar',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/task_details');
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Criar Tarefa'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // 4. Construção das 3 listas (ToDo, Doing, Done)
         final List<DragAndDropList> kanbanLists = [
           _buildDragList(context, "A Fazer", provider.todoTasks),
           _buildDragList(context, "Em Execução", provider.doingTasks),
           _buildDragList(context, "Concluído", provider.doneTasks),
         ];
 
-        // 3. O widget principal do DragAndDropLists
+        // 5. O widget principal do DragAndDropLists
         return Column(
           children: [
             // Área para mostrar erros temporários (das regras de negócio)

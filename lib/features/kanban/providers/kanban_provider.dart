@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:itasks/core/models/task_model.dart'; // <-- Usa a classe 'Task'
 import 'package:itasks/core/services/firestore_service.dart';
+import 'package:itasks/core/services/logger_service.dart';
 import 'package:itasks/core/providers/auth_provider.dart'; // <-- Importa o AuthProvider
 
 class KanbanProvider with ChangeNotifier {
@@ -37,7 +38,7 @@ class KanbanProvider with ChangeNotifier {
 
   void fetchTasks() {
     _isLoading = true;
-    _errorMessage = '';
+    _errorMessage = ''; // Clear previous errors
     notifyListeners();
 
     _tasksSubscription?.cancel();
@@ -46,11 +47,23 @@ class KanbanProvider with ChangeNotifier {
         _tasks = tasksData;
         _isLoading = false;
         _errorMessage = '';
+        LoggerService.info('Loaded ${tasksData.length} tasks from Firestore');
         notifyListeners();
       },
-      onError: (error) {
-        _errorMessage = "Erro ao carregar tarefas: $error";
+      onError: (error, stackTrace) {
         _isLoading = false;
+        _errorMessage = "Erro ao carregar tarefas: $error";
+        
+        LoggerService.error('Error fetching tasks', error);
+        LoggerService.error('Stack trace', stackTrace);
+        
+        // More detailed error message for debugging
+        if (error.toString().contains('String') && error.toString().contains('int')) {
+          _errorMessage = 'Erro de tipo de dados: Verifique se todos os campos numéricos '
+                         'no Firestore (storyPoints, order, idManager, idDeveloper, idTaskType) '
+                         'estão salvos como números e não como texto.';
+        }
+        
         notifyListeners();
       },
     );
