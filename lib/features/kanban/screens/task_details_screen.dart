@@ -59,6 +59,17 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // Fetch required data from providers using WidgetsBinding.addPostFrameCallback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final taskTypeProvider = context.read<TaskTypeProvider>();
+      final userManagementProvider = context.read<UserManagementProvider>();
+      
+      // Load task types and developers for dropdowns
+      taskTypeProvider.fetchTaskTypes();
+      userManagementProvider.fetchDevelopers();
+    });
+    
     if (!_isCreating) {
       // Se estamos a editar/ver, preenchemos os campos
       _titleController.text = widget.task['title'];
