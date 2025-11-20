@@ -12,13 +12,19 @@ class UserManagementProvider with ChangeNotifier {
   final AuthService _authService;
 
   List<AppUser> _users = []; // CORRIGIDO: Removido 'final'
+  List<Manager> _managers = [];
+  List<Developer> _developers = [];
   bool _isLoading = false;
 
   List<AppUser> get users => _users;
+  List<Manager> get managers => _managers;
+  List<Developer> get developers => _developers;
   bool get isLoading => _isLoading;
 
   UserManagementProvider(this._firestoreService, this._authService) {
     _fetchUsers();
+    fetchManagers();
+    fetchDevelopers();
   }
 
   Future<void> _fetchUsers() async {
@@ -26,6 +32,16 @@ class UserManagementProvider with ChangeNotifier {
     notifyListeners();
     _users = await _firestoreService.getUsers();
     _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> fetchManagers() async {
+    _managers = await _firestoreService.getAllManagers();
+    notifyListeners();
+  }
+
+  Future<void> fetchDevelopers() async {
+    _developers = await _firestoreService.getAllDevelopers();
     notifyListeners();
   }
 

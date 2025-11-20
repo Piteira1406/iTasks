@@ -1,9 +1,11 @@
 // features/management/user_management/screens/user_edit_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 // Importe os seus widgets
 import 'package:itasks/core/widgets/custom_button.dart';
 import 'package:itasks/core/widgets/custom_text_field.dart';
+import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
 
 // Constantes baseadas no enunciado
 enum UserRole { programador, gestor }
@@ -35,7 +37,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
   UserRole _selectedRole = UserRole.programador;
   NivelExperiencia _selectedNivel = NivelExperiencia.junior;
   Departamento _selectedDepartamento = Departamento.mobile;
-  String? _selectedManagerId; // Para o Programador
+  int? _selectedManagerId; // Para o Programador
 
   bool get _isEditing => widget.user != null;
 
@@ -165,8 +167,8 @@ class _UserEditScreenState extends State<UserEditScreen> {
 
   // Lista de widgets para campos de Programador
   List<Widget> _buildDeveloperFields() {
-    // TODO: A lista de gestores deve vir do Provider
-    final mockManagers = {'gestor1': 'Ana Silva', 'gestor2': 'Rui Pedro'};
+    final userManagementProvider = Provider.of<UserManagementProvider>(context, listen: false);
+    final managers = userManagementProvider.managers;
 
     return [
       DropdownButtonFormField<NivelExperiencia>(
@@ -189,7 +191,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
         onChanged: (value) => setState(() => _selectedNivel = value!),
       ),
       const SizedBox(height: 16),
-      DropdownButtonFormField<String>(
+      DropdownButtonFormField<int>(
         initialValue: _selectedManagerId,
         hint: Text('Selecionar Gestor'),
         decoration: InputDecoration(
@@ -197,11 +199,11 @@ class _UserEditScreenState extends State<UserEditScreen> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           prefixIcon: Icon(Icons.supervisor_account),
         ),
-        items: mockManagers.entries
+        items: managers
             .map(
-              (entry) => DropdownMenuItem(
-                value: entry.key, // ID do gestor
-                child: Text(entry.value), // Nome do gestor
+              (manager) => DropdownMenuItem(
+                value: manager.id,
+                child: Text(manager.name),
               ),
             )
             .toList(),
