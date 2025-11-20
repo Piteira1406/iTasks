@@ -9,7 +9,7 @@ import 'package:itasks/core/services/logger_service.dart';
 
 class CsvService {
   final DateFormat _dateTimeFormat = DateFormat('dd/MM/yyyy HH:mm');
-  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
+  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
   /// Exporta tarefas para CSV com download automático
   Future<String?> exportTasksToCSV({
@@ -30,69 +30,36 @@ class CsvService {
       // 2. Criar cabeçalhos do CSV
       List<List<dynamic>> rows = [
         [
-          'ID',
-          'Descrição',
-          'Status',
-          'Story Points',
-          'Ordem de Execução',
           'Programador',
-          'Tipo de Tarefa',
-          'Data de Criação',
-          'Início Previsto',
-          'Fim Previsto',
-          'Início Real',
-          'Fim Real',
-          'Tempo Previsto (dias)',
-          'Tempo Real (dias)',
-          'Tempo Real (horas)',
-          'Diferença (dias)',
+          'Descricao',
+          'DataPrevInicio',
+          'DataPrevFim',
+          'DataRealInicio',
+          'DataRealFim',
         ],
       ];
 
       // 3. Adicionar dados das tarefas
       for (var task in tasks) {
-        // Buscar nomes
         final developerName = developerNames[task.idDeveloper] ?? 'Desconhecido (ID: ${task.idDeveloper})';
-        final taskTypeName = taskTypeNames[task.idTaskType] ?? 'Desconhecido (ID: ${task.idTaskType})';
-
-        // Calcular tempos
-        final plannedDays = task.previsionEndDate.difference(task.previsionStartDate).inDays + 1;
         
         final hasRealDates = task.realStartDate != null && task.realEndDate != null;
-        final realDays = hasRealDates 
-            ? task.realEndDate!.difference(task.realStartDate!).inDays + 1
-            : null;
-        final realHours = hasRealDates 
-            ? task.realEndDate!.difference(task.realStartDate!).inHours
-            : null;
-        final difference = hasRealDates 
-            ? realDays! - plannedDays
-            : null;
-
+        
         rows.add([
-          task.id,
-          task.description,
-          _translateStatus(task.taskStatus),
-          task.storyPoints,
-          task.order,
           developerName,
-          taskTypeName,
-          _dateTimeFormat.format(task.creationDate),
-          _dateTimeFormat.format(task.previsionStartDate),
-          _dateTimeFormat.format(task.previsionEndDate),
-          hasRealDates ? _dateTimeFormat.format(task.realStartDate!) : 'N/A',
-          hasRealDates ? _dateTimeFormat.format(task.realEndDate!) : 'N/A',
-          plannedDays,
-          realDays ?? 'N/A',
-          realHours ?? 'N/A',
-          difference != null 
-              ? '${difference > 0 ? '+' : ''}$difference'
-              : 'N/A',
+          task.description,
+          _dateFormat.format(task.previsionStartDate),
+          _dateFormat.format(task.previsionEndDate),
+          hasRealDates ? _dateFormat.format(task.realStartDate!) : 'N/A',
+          hasRealDates ? _dateFormat.format(task.realEndDate!) : 'N/A',
         ]);
       }
 
       // 4. Converter para CSV
-      String csv = const ListToCsvConverter().convert(rows);
+      String csv = const ListToCsvConverter(
+        fieldDelimiter: ';',
+        eol: '\n',
+      ).convert(rows);
 
       // 5. Gerar nome do arquivo
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
