@@ -7,6 +7,8 @@ import 'package:itasks/core/widgets/custom_button.dart';
 import 'package:itasks/core/widgets/custom_text_field.dart';
 import 'package:itasks/features/kanban/providers/task_provider.dart';
 import 'package:itasks/core/providers/auth_provider.dart';
+import 'package:itasks/features/management/task_type_management/providers/task_type_provider.dart';
+import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
   final dynamic
@@ -28,13 +30,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   final _descController = TextEditingController();
   final _orderController = TextEditingController();
 
-  // TODO: Estes dados (tipos, devs) devem vir dos Providers
-  final _mockTaskTypes = {'type1': 'Bug Fix', 'type2': 'Feature'};
-  final _mockDevelopers = {'dev1': 'Bruno Costa', 'dev2': 'Carla Dias'};
-
   // Variáveis de estado
-  String? _selectedTaskTypeId;
-  String? _selectedDeveloperId;
+  int? _selectedTaskTypeId;
+  int? _selectedDeveloperId;
   DateTime? _startDate;
   DateTime? _endDate;
 
@@ -157,22 +155,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               ),
               const SizedBox(height: 16),
               // Dropdown Tipo de Tarefa
-              _buildDropdown(
-                label: 'Tipo de Tarefa',
-                icon: Icons.label,
-                value: _selectedTaskTypeId,
-                items: _mockTaskTypes,
-                onChanged: (val) => setState(() => _selectedTaskTypeId = val),
-              ),
+              _buildTaskTypeDropdown(),
               const SizedBox(height: 16),
               // Dropdown Programador
-              _buildDropdown(
-                label: 'Atribuir a Programador',
-                icon: Icons.person,
-                value: _selectedDeveloperId,
-                items: _mockDevelopers,
-                onChanged: (val) => setState(() => _selectedDeveloperId = val),
-              ),
+              _buildDeveloperDropdown(),
               const SizedBox(height: 16),
               CustomTextField(
                 controller: _orderController,
@@ -229,25 +215,48 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  // Helper para criar Dropdowns
-  Widget _buildDropdown({
-    required String label,
-    required IconData icon,
-    required String? value,
-    required Map<String, String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
+  // Helper para criar dropdown de Tipo de Tarefa
+  Widget _buildTaskTypeDropdown() {
+    final taskTypeProvider = context.watch<TaskTypeProvider>();
+    final taskTypes = taskTypeProvider.taskTypes;
+
+    return DropdownButtonFormField<int>(
+      value: _selectedTaskTypeId,
       decoration: InputDecoration(
-        labelText: label,
+        labelText: 'Tipo de Tarefa',
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        prefixIcon: Icon(icon),
+        prefixIcon: Icon(Icons.label),
       ),
-      items: items.entries.map((entry) {
-        return DropdownMenuItem(value: entry.key, child: Text(entry.value));
+      items: taskTypes.map((type) {
+        return DropdownMenuItem(
+          value: type.id,
+          child: Text(type.name),
+        );
       }).toList(),
-      onChanged: widget.isReadOnly ? null : onChanged, // Bloqueado se ReadOnly
+      onChanged: widget.isReadOnly ? null : (val) => setState(() => _selectedTaskTypeId = val),
+      validator: (val) => val == null ? 'Campo obrigatório' : null,
+    );
+  }
+
+  // Helper para criar dropdown de Programador
+  Widget _buildDeveloperDropdown() {
+    final userManagementProvider = context.watch<UserManagementProvider>();
+    final developers = userManagementProvider.developers;
+
+    return DropdownButtonFormField<int>(
+      value: _selectedDeveloperId,
+      decoration: InputDecoration(
+        labelText: 'Atribuir a Programador',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        prefixIcon: Icon(Icons.person),
+      ),
+      items: developers.map((dev) {
+        return DropdownMenuItem(
+          value: dev.id,
+          child: Text(dev.name),
+        );
+      }).toList(),
+      onChanged: widget.isReadOnly ? null : (val) => setState(() => _selectedDeveloperId = val),
       validator: (val) => val == null ? 'Campo obrigatório' : null,
     );
   }
