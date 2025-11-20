@@ -29,15 +29,62 @@ class TaskDetailsProvider with ChangeNotifier {
   void setPlannedStartDate(DateTime date) => _plannedStartDate = date;
   void setPlannedEndDate(DateTime date) => _plannedEndDate = date;
 
-  Future<bool> saveTask(int managerId) async {
+  Future<bool> saveTask(int managerId, {String? Function(String)? errorCallback}) async {
     _isLoading = true;
     notifyListeners();
 
-    // TODO: Adicionar validação de formulário
+    // Validation 1: Required fields
+    if (_description.isEmpty) {
+      _isLoading = false;
+      notifyListeners();
+      if (errorCallback != null) errorCallback('Descrição é obrigatória');
+      return false;
+    }
+
     if (_selectedDeveloperId == null || _selectedTaskTypeId == null) {
       _isLoading = false;
       notifyListeners();
-      return false; // Falha na validação
+      if (errorCallback != null) errorCallback('Selecione Programador e Tipo de Tarefa');
+      return false;
+    }
+
+    if (_storyPoints <= 0) {
+      _isLoading = false;
+      notifyListeners();
+      if (errorCallback != null) errorCallback('Story Points deve ser maior que 0');
+      return false;
+    }
+
+    if (_executionOrder <= 0) {
+      _isLoading = false;
+      notifyListeners();
+      if (errorCallback != null) errorCallback('Ordem de execução deve ser maior que 0');
+      return false;
+    }
+
+    if (_plannedEndDate.isBefore(_plannedStartDate)) {
+      _isLoading = false;
+      notifyListeners();
+      if (errorCallback != null) errorCallback('Data de fim deve ser posterior à data de início');
+      return false;
+    }
+
+    // Validation 2: Check duplicate order for same developer (CRITICAL)
+    final canCreate = await _firestoreService.canCreateTaskWithOrder(
+      developerId: _selectedDeveloperId!,
+      order: _executionOrder,
+    );
+
+    if (!canCreate) {
+      _isLoading = false;
+      notifyListeners();
+      if (errorCallback != null) {
+        errorCallback(
+          'Erro: Já existe uma tarefa com ordem $_executionOrder para este programador. '
+          'Escolha outra ordem de execução.'
+        );
+      }
+      return false;
     }
 
     final newTask = Task(

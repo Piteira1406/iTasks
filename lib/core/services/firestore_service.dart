@@ -150,6 +150,28 @@ class FirestoreService {
     return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
   }
 
+  /// Check if a task with the same order already exists for a developer
+  /// Returns true if the order is available (can be used)
+  Future<bool> canCreateTaskWithOrder({
+    required int developerId,
+    required int order,
+    String? excludeTaskId, // For edit scenario
+  }) async {
+    var query = _db
+        .collection(tasksCollection)
+        .where('idDeveloper', isEqualTo: developerId)
+        .where('order', isEqualTo: order);
+    
+    final querySnapshot = await query.get();
+    
+    // If editing, exclude the current task from check
+    if (excludeTaskId != null) {
+      return querySnapshot.docs.every((doc) => doc.id == excludeTaskId);
+    }
+    
+    return querySnapshot.docs.isEmpty;
+  }
+
   Future<void> updateTaskState(String taskId, String newState) async {
     await _db.collection(tasksCollection).doc(taskId).update({
       'taskStatus': newState,
@@ -162,6 +184,24 @@ class FirestoreService {
     await _db.collection(tasksCollection).doc(taskId).update({
       'order': newOrder,
     });
+  }
+
+  /// Update task with validation
+  Future<void> updateTask(Task task) async {
+    // Validate order is not duplicated (excluding current task)
+    final canUpdate = await canCreateTaskWithOrder(
+      developerId: task.idDeveloper,
+      order: task.order,
+      excludeTaskId: task.id,
+    );
+    
+    if (!canUpdate) {
+      throw Exception(
+        'Já existe outra tarefa com ordem ${task.order} para este programador'
+      );
+    }
+    
+    await _db.collection(tasksCollection).doc(task.id).update(task.toMap());
   }
 
   Future<List<Task>> getCompletedTasksForManager(String managerId) async {
