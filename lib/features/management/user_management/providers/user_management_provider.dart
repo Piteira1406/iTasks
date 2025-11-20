@@ -137,5 +137,105 @@ class UserManagementProvider with ChangeNotifier {
     }
   }
 
+  /// Update existing user with complete profile
+  Future<String?> updateUser({
+    required String uid,
+    required AppUser appUser,
+    Manager? manager,
+    Developer? developer,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Validation: If changing username, check it's unique
+      final currentUser = await _firestoreService.getUserById(uid);
+      if (currentUser != null && currentUser.username != appUser.username) {
+        final isUnique = await _firestoreService.isUsernameUnique(appUser.username);
+        if (!isUnique) {
+          _isLoading = false;
+          notifyListeners();
+          return "Erro: O Username '${appUser.username}' já está a ser utilizado.";
+        }
+      }
+
+      // Update user and profile
+      await _firestoreService.updateUserComplete(
+        uid: uid,
+        appUser: appUser,
+        manager: manager,
+        developer: developer,
+      );
+
+      _isLoading = false;
+      notifyListeners();
+      return null; // Success
+    } catch (e) {
+      LoggerService.error('Error updating user', e);
+      _isLoading = false;
+      notifyListeners();
+      return "Erro ao atualizar utilizador: ${e.toString()}";
+    }
+  }
+
+  /// Delete user with cascade (profile + auth)
+  Future<String?> deleteUser({
+    required String uid,
+    required AppUser appUser,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Check if user has assigned tasks
+      if (appUser.type == 'Developer') {
+        final developer = await _firestoreService.getDeveloperByUserId(uid);
+        if (developer != null) {
+          final tasks = await _firestoreService.getTasksByDeveloper(developer.id.toString());
+          if (tasks.isNotEmpty) {
+            _isLoading = false;
+            notifyListeners();
+            return "Erro: Não é possível eliminar programador com tarefas atribuídas. "
+                   "Reatribua as ${tasks.length} tarefa(s) primeiro.";
+          }
+        }
+      }
+
+      // Check if Manager has developers assigned
+      if (appUser.type == 'Manager') {
+        final manager = await _firestoreService.getManagerByUserId(uid);
+        if (manager != null) {
+          final allDevelopers = await _firestoreService.getAllDevelopers();
+          final assignedDevs = allDevelopers.where((d) => d.idManager == manager.id).toList();
+          if (assignedDevs.isNotEmpty) {
+            _isLoading = false;
+            notifyListeners();
+            return "Erro: Não é possível eliminar gestor com programadores atribuídos. "
+                   "Reatribua os ${assignedDevs.length} programador(es) primeiro.";
+          }
+        }
+      }
+
+      // Perform cascade delete
+      await _firestoreService.deleteUserComplete(
+        uid: uid,
+        appUser: appUser,
+        deleteFromAuth: false, // Don't delete from Auth - only managers can do this
+      );
+
+      // TODO: If current user is admin/manager, also delete from Firebase Auth
+      // This requires admin SDK or reauthentication
+
+      _isLoading = false;
+      notifyListeners();
+      return null; // Success
+    } catch (e) {
+      LoggerService.error('Error deleting user', e);
+      _isLoading = false;
+      notifyListeners();
+      return "Erro ao eliminar utilizador: ${e.toString()}";
+    }
+  }
+
   // TODO: Adicionar métodos para updateUser e deleteUser
 }
