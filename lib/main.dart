@@ -25,6 +25,10 @@ import 'features/reports/providers/report_provider.dart';
 // Ecrãs
 import 'features/auth/screens/login_screen.dart';
 import 'features/kanban/screens/kanban_screen.dart';
+import 'features/kanban/screens/task_details_screen.dart';
+import 'features/reports/screens/reports_screen.dart';
+import 'features/management/user_management/screens/user_list_screen.dart';
+import 'features/management/task_type_management/screens/task_type_screen.dart';
 
 // Ponto de entrada da aplicação
 Future<void> main() async {
@@ -99,7 +103,29 @@ class ITasksApp extends StatelessWidget {
       // AuthWrapper decide qual o primeiro ecrã a mostrar
       home: const AuthWrapper(),
 
-      // TODO: Adicionar aqui as suas rotas nomeadas se necessário
+      // Rotas nomeadas para navegação
+      routes: {
+        '/kanban': (context) => const KanbanScreen(),
+        '/reports': (context) => const ReportsScreen(),
+        '/task_types': (context) => const TaskTypeScreen(),
+        '/user_management': (context) => const UserListScreen(),
+        '/task_details': (context) => const TaskDetailsScreen(
+              task: null,
+              isReadOnly: false,
+            ),
+      },
+
+      // Handler para rotas desconhecidas
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => Scaffold(
+            appBar: AppBar(title: const Text('Erro')),
+            body: Center(
+              child: Text('Rota não encontrada: ${settings.name}'),
+            ),
+          ),
+        );
+      },
     );
   }
 }

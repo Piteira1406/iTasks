@@ -51,8 +51,8 @@ class Task {
       id: doc.id, // O ID vem do documento, não do 'map'
       description: map['description'] ?? '',
       taskStatus: map['taskStatus'] ?? 'ToDo', // Default para ToDo
-      order: map['order'] ?? 0,
-      storyPoints: map['storyPoints'] ?? 0,
+      order: _toInt(map['order']),
+      storyPoints: _toInt(map['storyPoints']),
 
       // Converte Timestamps para DateTimes
       creationDate: timestampToDateTime(map['creationDate']) ?? DateTime.now(),
@@ -65,9 +65,9 @@ class Task {
       realEndDate: timestampToDateTime(map['realEndDate']),
       realStartDate: timestampToDateTime(map['realStartDate']),
 
-      idManager: map['idManager'] ?? 0,
-      idDeveloper: map['idDeveloper'] ?? 0,
-      idTaskType: map['idTaskType'] ?? 0,
+      idManager: _toInt(map['idManager']),
+      idDeveloper: _toInt(map['idDeveloper']),
+      idTaskType: _toInt(map['idTaskType']),
     );
   }
 
@@ -125,5 +125,14 @@ class Task {
       idDeveloper: idDeveloper ?? this.idDeveloper,
       idTaskType: idTaskType ?? this.idTaskType,
     );
+  }
+
+  /// Safe conversion from dynamic to int
+  static int _toInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    if (value is double) return value.toInt();
+    return 0;
   }
 }
