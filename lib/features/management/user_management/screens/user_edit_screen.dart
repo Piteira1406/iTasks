@@ -85,14 +85,34 @@ class _UserEditScreenState extends State<UserEditScreen> {
                 controller: _nameController,
                 hintText: 'Nome Completo',
                 icon: Icons.person,
-                validator: (val) => val!.isEmpty ? 'Campo obrigatório' : null,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Nome é obrigatório';
+                  }
+                  if (value.trim().length < 3) {
+                    return 'Nome deve ter pelo menos 3 caracteres';
+                  }
+                  if (!RegExp(r'^[a-zA-ZÀ-ÿ\s]+$').hasMatch(value)) {
+                    return 'Nome deve conter apenas letras';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               CustomTextField(
                 controller: _usernameController,
                 hintText: 'Username (Email)',
                 icon: Icons.email,
-                validator: (val) => val!.isEmpty ? 'Campo obrigatório' : null,
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Email é obrigatório';
+                  }
+                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    return 'Email inválido';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               CustomTextField(
@@ -101,12 +121,27 @@ class _UserEditScreenState extends State<UserEditScreen> {
                 icon: Icons.lock,
                 obscureText: true,
                 validator: (val) {
-                  if (!_isEditing && val!.isEmpty) return 'Campo obrigatório';
-                  if (_isEditing && val!.isNotEmpty && val.length < 6) {
-                    return 'Mínimo 6 caracteres';
-                  }
-                  if (!_isEditing && val!.length < 6) {
-                    return 'Mínimo 6 caracteres';
+                  if (!_isEditing) {
+                    // Para novo usuário, password é obrigatória
+                    if (val == null || val.isEmpty) {
+                      return 'Password é obrigatória';
+                    }
+                    if (val.length < 6) {
+                      return 'Password deve ter pelo menos 6 caracteres';
+                    }
+                    if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)').hasMatch(val)) {
+                      return 'Password deve conter letras e números';
+                    }
+                  } else {
+                    // Para edição, password é opcional, mas se preenchida deve ser válida
+                    if (val != null && val.isNotEmpty) {
+                      if (val.length < 6) {
+                        return 'Password deve ter pelo menos 6 caracteres';
+                      }
+                      if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)').hasMatch(val)) {
+                        return 'Password deve conter letras e números';
+                      }
+                    }
                   }
                   return null;
                 },
@@ -172,10 +207,16 @@ class _UserEditScreenState extends State<UserEditScreen> {
       DropdownButtonFormField<NivelExperiencia>(
         initialValue: _selectedNivel,
         decoration: InputDecoration(
-          labelText: 'Nível de Experiência',
+          labelText: 'Nível de Experiência *',
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           prefixIcon: Icon(Icons.star_border),
         ),
+        validator: (value) {
+          if (value == null) {
+            return 'Selecione o nível de experiência';
+          }
+          return null;
+        },
         items: NivelExperiencia.values
             .map(
               (nivel) => DropdownMenuItem(
@@ -193,10 +234,16 @@ class _UserEditScreenState extends State<UserEditScreen> {
         initialValue: _selectedManagerId,
         hint: Text('Selecionar Gestor'),
         decoration: InputDecoration(
-          labelText: 'Gestor Responsável',
+          labelText: 'Gestor Responsável *',
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           prefixIcon: Icon(Icons.supervisor_account),
         ),
+        validator: (value) {
+          if (value == null) {
+            return 'Selecione um gestor responsável';
+          }
+          return null;
+        },
         items: mockManagers.entries
             .map(
               (entry) => DropdownMenuItem(
@@ -206,7 +253,6 @@ class _UserEditScreenState extends State<UserEditScreen> {
             )
             .toList(),
         onChanged: (value) => setState(() => _selectedManagerId = value),
-        validator: (val) => val == null ? 'Campo obrigatório' : null,
       ),
     ];
   }
@@ -217,10 +263,16 @@ class _UserEditScreenState extends State<UserEditScreen> {
       DropdownButtonFormField<Departamento>(
         initialValue: _selectedDepartamento,
         decoration: InputDecoration(
-          labelText: 'Departamento',
+          labelText: 'Departamento *',
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           prefixIcon: Icon(Icons.business),
         ),
+        validator: (value) {
+          if (value == null) {
+            return 'Selecione o departamento';
+          }
+          return null;
+        },
         items: Departamento.values
             .map(
               (dep) => DropdownMenuItem(
