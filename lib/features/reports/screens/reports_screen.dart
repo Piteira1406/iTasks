@@ -5,6 +5,7 @@ import 'package:itasks/features/reports/providers/report_provider.dart';
 import 'package:itasks/features/reports/widgets/report_filters.dart';
 import 'package:itasks/features/reports/widgets/statistics_cards.dart';
 import 'package:itasks/features/reports/widgets/tasks_table.dart';
+import 'package:itasks/features/reports/widgets/storypoints_estimation_card.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -119,6 +120,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                   // Filtros
                   const ReportFilters(),
+                  const SizedBox(height: 16),
+
+                  // StoryPoints Estimation Card
+                  const StoryPointsEstimationCard(),
                   const SizedBox(height: 16),
 
                   // Botão de gerar relatório
