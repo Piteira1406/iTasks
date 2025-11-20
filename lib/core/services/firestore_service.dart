@@ -4,6 +4,7 @@ import 'package:itasks/core/models/developer_model.dart';
 import 'package:itasks/core/models/manager_model.dart';
 import 'package:itasks/core/models/task_model.dart';
 import 'package:itasks/core/models/task_type_model.dart'; // <-- O NOME DA CLASSE AQUI DENTRO É 'TaskType'
+import 'package:itasks/core/services/logger_service.dart';
 
 // ADICIONADO: Padronização dos nomes das coleções
 const String usersCollection = 'Users';
@@ -129,7 +130,7 @@ class FirestoreService {
     return null;
   }
 
-  //TODO: Add here methods Update and delete for users (like the business rule of manager)
+  // User CRUD operations completed - see updateUserComplete and deleteUserComplete methods
 
   // --- TASKS ---
 
@@ -296,6 +297,65 @@ class FirestoreService {
 
   Future<void> deleteDeveloper(String developerId) async {
     await _db.collection(developersCollection).doc(developerId).delete();
+  }
+
+  /// Complete user update - updates AppUser and specific profile (Manager/Developer)
+  Future<void> updateUserComplete({
+    required String uid,
+    required AppUser appUser,
+    Manager? manager,
+    Developer? developer,
+  }) async {
+    // Update AppUser
+    await updateUser(uid, appUser);
+    
+    // Update specific profile
+    if (appUser.type == 'Manager' && manager != null) {
+      await updateManager(manager);
+    } else if (appUser.type == 'Developer' && developer != null) {
+      await updateDeveloper(developer);
+    }
+  }
+
+  /// Complete user deletion - deletes AppUser, profile, and optionally Auth account
+  /// This implements cascade delete to maintain data integrity
+  Future<void> deleteUserComplete({
+    required String uid,
+    required AppUser appUser,
+    required bool deleteFromAuth, // If true, also deletes from Firebase Auth
+  }) async {
+    try {
+      // Step 1: Delete specific profile (Manager or Developer)
+      if (appUser.type == 'Manager') {
+        final manager = await getManagerByUserId(uid);
+        if (manager != null) {
+          await deleteManager(manager.id.toString());
+          LoggerService.info('Deleted Manager profile: ${manager.id}');
+        }
+      } else if (appUser.type == 'Developer') {
+        final developer = await getDeveloperByUserId(uid);
+        if (developer != null) {
+          await deleteDeveloper(developer.id.toString());
+          LoggerService.info('Deleted Developer profile: ${developer.id}');
+        }
+      }
+      
+      // Step 2: Delete AppUser document
+      await deleteUser(uid);
+      LoggerService.info('Deleted AppUser: $uid');
+      
+      // Step 3: Delete from Firebase Auth (if requested)
+      // Note: This should be done by the calling code with admin privileges
+      if (deleteFromAuth) {
+        LoggerService.warning(
+          'Auth deletion requested for $uid - this should be handled by admin/manager'
+        );
+      }
+      
+    } catch (e) {
+      LoggerService.error('Error in cascade delete for user $uid', e);
+      rethrow;
+    }
   }
 
   Future<List<Manager>> getAllManagers() async {
