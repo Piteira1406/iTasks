@@ -29,12 +29,30 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
   final _orderController = TextEditingController();
+  final _storyPointsController = TextEditingController();
 
   // Variáveis de estado
   int? _selectedTaskTypeId;
   int? _selectedDeveloperId;
   DateTime? _startDate;
   DateTime? _endDate;
+
+  // Método para validar datas
+  void _validateDates() {
+    if (_startDate != null && _endDate != null) {
+      if (_endDate!.isBefore(_startDate!)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Data de fim deve ser posterior à data de início'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() {
+          _endDate = _startDate;
+        });
+      }
+    }
+  }
 
   bool get _isCreating => widget.task == null;
 
@@ -54,6 +72,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     _titleController.dispose();
     _descController.dispose();
     _orderController.dispose();
+    _storyPointsController.dispose();
     super.dispose();
   }
 
@@ -119,6 +138,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           _endDate = picked;
         }
       });
+      // Validate dates after setting them
+      _validateDates();
     }
   }
 
@@ -152,6 +173,15 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 icon: Icons.description,
                 readOnly: widget.isReadOnly,
                 maxLines: 4,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Descrição é obrigatória';
+                  }
+                  if (value.trim().length < 10) {
+                    return 'Descrição deve ter pelo menos 10 caracteres';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               // Dropdown Tipo de Tarefa
@@ -166,7 +196,37 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 icon: Icons.priority_high,
                 readOnly: widget.isReadOnly,
                 keyboardType: TextInputType.number,
-                validator: (val) => val!.isEmpty ? 'Campo obrigatório' : null,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Ordem é obrigatória';
+                  }
+                  final order = int.tryParse(value);
+                  if (order == null || order <= 0) {
+                    return 'Ordem deve ser um número maior que 0';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
+                controller: _storyPointsController,
+                hintText: 'Story Points (estimativa de complexidade)',
+                icon: Icons.stars,
+                readOnly: widget.isReadOnly,
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Story Points é obrigatório';
+                  }
+                  final points = int.tryParse(value);
+                  if (points == null || points <= 0) {
+                    return 'Story Points deve ser maior que 0';
+                  }
+                  if (points > 100) {
+                    return 'Story Points deve ser no máximo 100';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
@@ -256,6 +316,13 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           child: Text(dev.name),
         );
       }).toList(),
+      onChanged: widget.isReadOnly ? null : onChanged, // Bloqueado se ReadOnly
+      validator: (val) {
+        if (val == null) {
+          return 'Selecione uma opção';
+        }
+        return null;
+      },
       onChanged: widget.isReadOnly ? null : (val) => setState(() => _selectedDeveloperId = val),
       validator: (val) => val == null ? 'Campo obrigatório' : null,
     );
