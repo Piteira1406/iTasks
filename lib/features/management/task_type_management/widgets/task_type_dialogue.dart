@@ -10,7 +10,7 @@ import 'package:itasks/core/widgets/loading_spinner.dart';
 
 class TaskTypeDialog extends StatefulWidget {
   // Usa o modelo real. 'null' se for para criar um novo.
-  final TaskType? taskType;
+  final TaskTypeModel? taskType;
   // Função 'onSave' que devolve o nome escrito
   final Function(String name) onSave;
 

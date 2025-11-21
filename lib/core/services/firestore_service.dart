@@ -412,7 +412,7 @@ class FirestoreService {
         .toList();
   }
 
-  Future<void> updateTaskType(TaskType taskType) async {
+  Future<void> updateTaskType(TaskTypeModel taskType) async {
     // Usa o ID do modelo para saber qual documento atualizar
     await _db
         .collection(taskTypesCollection)

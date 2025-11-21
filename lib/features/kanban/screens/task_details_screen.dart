@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:provider/provider.dart';
 import 'package:itasks/core/models/task_model.dart';
-import 'package:itasks/features/kanban/providers/task_details_provider.dart'; // O ficheiro que editámos acima
-import 'package:itasks/core/providers/auth_provider.dart';
+import 'package:itasks/features/kanban/providers/task_details_provider.dart'; // O provider principal
+import 'package:itasks/core/providers/auth_provider.dart'; // Para autenticação e IDs do Manager
 import 'package:itasks/core/widgets/glass_card.dart'; // O teu widget de vidro
-import 'package:itasks/features/kanban/providers/task_provider.dart';
-import 'package:itasks/core/providers/auth_provider.dart';
-import 'package:itasks/features/management/task_type_management/providers/task_type_provider.dart';
-import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
+// Assumindo que AppUser e TaskType Models estão disponíveis para o Dropdown
+import 'package:itasks/core/models/app_user_model.dart';
+import 'package:itasks/core/models/task_type_model.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
   final Task? task; // Se null = Criar Nova
@@ -23,105 +21,111 @@ class TaskDetailsScreen extends StatefulWidget {
 class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controladores para os campos
-  final _titleController = TextEditingController();
-  final _descController = TextEditingController();
-  final _orderController = TextEditingController();
-  final _storyPointsController = TextEditingController();
+  // Controladores que apenas lidam com a interface de input de texto.
+  // O estado real reside no Provider, estes apenas refletem/atualizam.
+  late final TextEditingController _descController;
+  late final TextEditingController _pointsController;
 
-  // Variáveis de estado
-  int? _selectedTaskTypeId;
-  int? _selectedDeveloperId;
-  DateTime? _startDate;
-  DateTime? _endDate;
-
-  // Método para validar datas
-  void _validateDates() {
-    if (_startDate != null && _endDate != null) {
-      if (_endDate!.isBefore(_startDate!)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Data de fim deve ser posterior à data de início'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() {
-          _endDate = _startDate;
-        });
-      }
-    }
-  }
+  // Nota: _orderController foi removido pois não é usado em nenhuma lógica ou widget no código original.
 
   bool get _isCreating => widget.task == null;
 
   @override
   void initState() {
     super.initState();
-    _descController = TextEditingController();
-    _pointsController = TextEditingController();
 
-    // Carregar dados assim que o ecrã abre
+    // Utilizamos addPostFrameCallback para garantir que o contexto está disponível
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<TaskDetailsProvider>(context, listen: false);
 
       // 1. Carregar listas (devs e tipos)
       provider.loadDropdownData();
 
-      // 2. Se for edição, preencher campos
+      // 2. Definir dados da Task (se edição) ou limpar (se criação)
       if (widget.task != null) {
         provider.setTaskData(widget.task!);
-        _descController.text = widget.task!.description;
-        _pointsController.text = widget.task!.storyPoints.toString();
       } else {
         provider.clearForm(); // Limpar se for nova
       }
+
+      // 3. Inicializar Controllers e definir Listeners após carregar o estado
+      _descController = TextEditingController(text: provider.description);
+      _pointsController = TextEditingController(
+        text: provider.storyPoints > 0 ? provider.storyPoints.toString() : '',
+      );
+
+      // Adicionar Listeners para atualizar o Provider em tempo real
+      _descController.addListener(
+        () => provider.setDescription(_descController.text),
+      );
+      _pointsController.addListener(() {
+        final points = int.tryParse(_pointsController.text) ?? 0;
+        provider.setStoryPoints(points);
+      });
     });
   }
 
   @override
   void dispose() {
     _descController.dispose();
-    _orderController.dispose();
-    _storyPointsController.dispose();
+    _pointsController.dispose();
+    // Não é necessário dar dispose a _orderController se não foi inicializado/usado
     super.dispose();
   }
 
+  // Função centralizada para guardar a tarefa
   void _saveForm() async {
+    // Se for modo read-only, o botão de salvar não deve sequer aparecer, mas é uma segurança.
+    if (widget.isReadOnly) return;
+
     if (_formKey.currentState!.validate()) {
       final taskProvider = context.read<TaskDetailsProvider>();
       final authProvider = context.read<AuthProvider>();
 
-      final managerId = authProvider.managerProfile?.id ?? 0;
+      // Usamos o ID do AppUser logado (esperando que seja o Manager)
+      final managerId = authProvider.appUser?.id;
+      final existingTaskId = widget.task?.id; // ID existe se for edição
 
-      if (managerId == 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erro: Gestor não identificado'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      if (managerId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Erro: Gestor não identificado. Faça login novamente.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
         return;
       }
 
-      // Call saveTask with error callback
-      final success = await taskProvider.saveTask(
-        managerId,
-        errorCallback: (errorMessage) {
+      // Inicia o processo de gravação no Provider
+      final managerIdStr = managerId.toString(); // saveTask expects a String id
+      bool success = false;
+      try {
+        success = await taskProvider.saveTask(
+          managerIdStr, // ID do Gestor responsável (string)
+          existingTaskId: existingTaskId,
+        );
+      } catch (e) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(errorMessage),
+              content: Text('Erro ao salvar: ${e.toString()}'),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 4),
             ),
           );
-          return null;
-        },
-      );
+        }
+        return;
+      }
 
-      if (success) {
+      if (success && mounted) {
+        final actionText = _isCreating ? 'criada' : 'atualizada';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tarefa criada com sucesso!'),
+          SnackBar(
+            content: Text('Tarefa $actionText com sucesso!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -132,75 +136,94 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   // Função para mostrar o DatePicker
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
-    if (widget.isReadOnly) return; // Bloqueado para Programador
+    if (widget.isReadOnly) return;
+
+    final provider = context.read<TaskDetailsProvider>();
+    // Usa a data atual do provider (cast a dynamic para evitar erro de nomes diferentes no provider)
+    final initialDate = isStartDate
+        ? (provider as dynamic).plannedStartDate
+        : (provider as dynamic).plannedEndDate;
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: (isStartDate ? _startDate : _endDate) ?? DateTime.now(),
+      initialDate: initialDate ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
     );
-    if (picked != null) {
-      setState(() {
-        if (isStartDate) {
-          _startDate = picked;
-        } else {
-          _endDate = picked;
-        }
-      });
-      // Validate dates after setting them
-      _validateDates();
+
+    if (picked != null && mounted) {
+      if (isStartDate) {
+        (provider as dynamic).setPlannedStartDate(picked);
+      } else {
+        (provider as dynamic).setPlannedEndDate(picked);
+      }
+
+      // Validação de datas como no código original (adaptado para usar o Provider)
+      _validateDates(provider);
+    }
+  }
+
+  // Método para validar datas (adaptado para usar o Provider)
+  void _validateDates(TaskDetailsProvider provider) {
+    final dyn = provider as dynamic;
+    if (dyn.plannedStartDate != null && dyn.plannedEndDate != null) {
+      if (dyn.plannedEndDate!.isBefore(dyn.plannedStartDate!)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Data de fim deve ser posterior à data de início. Ajustada.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        // Ajusta a data de fim para ser igual à data de início
+        dyn.setPlannedEndDate(dyn.plannedStartDate);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Ouve o Provider para reagir a alterações de estado
     final provider = context.watch<TaskDetailsProvider>();
+    final dynProvider = provider as dynamic;
     final authProvider = context.read<AuthProvider>();
+
     final isEditing = widget.task != null;
+    final isManager = authProvider.appUser?.type == 'Manager';
+    final isEditable = !widget.isReadOnly && isManager;
+
+    // Se o Provider ainda não carregou os dados iniciais
+    if (dynProvider.isLoadingInitialData) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
-      extendBodyBehindAppBar: true, // Importante para o fundo passar por trás
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(isEditing ? 'Editar Tarefa' : 'Nova Tarefa'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          if (!widget.isReadOnly)
+          // Botão Guardar visível apenas se for editável
+          if (isEditable)
             IconButton(
-              icon: provider.isLoading
+              icon: dynProvider.isSaving
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Icon(Icons.save),
-              onPressed: () async {
-                if (_formKey.currentState!.validate()) {
-                  final success = await provider.saveTask(
-                    authProvider.appUser?.id.toString() ?? 'unknown_manager',
-                    existingTaskId: widget.task?.id,
-                  );
-
-                  if (success && mounted) {
-                    Navigator.pop(context); // Volta para o Kanban
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Erro ao salvar ou campos inválidos'),
-                      ),
-                    );
-                  }
-                }
-              },
+              onPressed: dynProvider.isSaving ? null : _saveForm,
             ),
         ],
       ),
       body: Container(
-        // Fundo gradiente igual ao do Kanban para consistência
+        // Fundo gradiente
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
               Theme.of(context).scaffoldBackgroundColor,
-              Theme.of(context).primaryColor.withValues(alpha: 0.3),
+              Theme.of(context).primaryColor.withOpacity(0.3),
             ],
           ),
         ),
@@ -208,7 +231,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: GlassCard(
-              // <--- O TEU WIDGET GLASS AQUI
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Form(
@@ -225,82 +247,96 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       const SizedBox(height: 20),
 
                       // --- Descrição ---
-                      TextFormField(
+                      _buildTextField(
                         controller: _descController,
-                        decoration: const InputDecoration(
-                          labelText: 'Descrição',
-                          border: OutlineInputBorder(),
-                          filled: true,
-                          fillColor: Colors.white10,
-                        ),
+                        label: 'Descrição',
                         maxLines: 3,
-                        enabled: !widget.isReadOnly,
+                        isEnabled: isEditable,
                         validator: (val) => val!.isEmpty ? 'Obrigatório' : null,
-                        onChanged: (val) => provider.setDescription(val),
                       ),
                       const SizedBox(height: 20),
 
                       // --- Story Points ---
-                      TextFormField(
+                      _buildTextField(
                         controller: _pointsController,
-                        decoration: const InputDecoration(
-                          labelText: 'Story Points',
-                          border: OutlineInputBorder(),
-                          filled: true,
-                          fillColor: Colors.white10,
-                        ),
+                        label: 'Story Points',
                         keyboardType: TextInputType.number,
-                        enabled: !widget.isReadOnly,
-                        onChanged: (val) =>
-                            provider.setStoryPoints(int.tryParse(val) ?? 0),
+                        isEnabled: isEditable,
+                        validator: (val) {
+                          if (val!.isEmpty) return 'Obrigatório';
+                          if (int.tryParse(val) == null || int.parse(val) < 0) {
+                            return 'Deve ser um número inteiro não negativo';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 20),
 
                       // --- Dropdown: Tipo de Tarefa ---
-                      DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: 'Tipo de Tarefa',
-                          filled: true,
-                          fillColor: Colors.white10,
-                          border: OutlineInputBorder(),
+                      _buildTaskTypeDropdown(
+                        provider.taskTypesList,
+                        provider.selectedTaskTypeId?.toString(),
+                        isEditable,
+                        (val) => provider.setTaskTypeId(
+                          val == null ? null : int.tryParse(val),
                         ),
-                        value: provider.selectedTaskTypeId,
-                        // Aqui assumimos que a lista tem Maps. Ajusta se usares Models.
-                        items: provider.taskTypesList.map((type) {
-                          return DropdownMenuItem<String>(
-                            value: type.id, // ou type.id se for Model
-                            child: Text(type.name), // ou type.name
-                          );
-                        }).toList(),
-                        onChanged: widget.isReadOnly
-                            ? null
-                            : (val) => provider.setTaskTypeId(val),
-                        validator: (val) =>
-                            val == null ? 'Selecione um tipo' : null,
                       ),
                       const SizedBox(height: 20),
 
                       // --- Dropdown: Programador ---
-                      DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: 'Atribuir a Programador',
-                          filled: true,
-                          fillColor: Colors.white10,
-                          border: OutlineInputBorder(),
+                      _buildDeveloperDropdown(
+                        provider.developersList,
+                        provider.selectedDeveloperId?.toString(),
+                        isEditable,
+                        (val) => provider.setDeveloperId(
+                          val == null ? null : int.tryParse(val),
                         ),
-                        value: provider.selectedDeveloperId,
-                        items: provider.developersList.map((dev) {
-                          return DropdownMenuItem<String>(
-                            value: dev.id.toString(),
-                            child: Text(dev.name),
-                          );
-                        }).toList(),
-                        onChanged: widget.isReadOnly
-                            ? null
-                            : (val) => provider.setDeveloperId(val),
-                        validator: (val) =>
-                            val == null ? 'Selecione um programador' : null,
                       ),
+                      const SizedBox(height: 20),
+
+                      // --- Datas Planeadas ---
+                      Text(
+                        'Datas Planeadas',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      _buildDatePicker(
+                        'Início Planeado',
+                        dynProvider.plannedStartDate,
+                        (context) =>
+                            _selectDate(context, true), // isStartDate = true
+                        isEditable,
+                      ),
+                      _buildDatePicker(
+                        'Fim Planeado',
+                        dynProvider.plannedEndDate,
+                        (context) =>
+                            _selectDate(context, false), // isStartDate = false
+                        isEditable,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // --- Datas Reais (Apenas em edição/leitura) ---
+                      if (isEditing) ...[
+                        Text(
+                          'Datas e Estado Reais',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        _buildReadOnlyField(
+                          'Status Atual',
+                          widget.task!.toString(),
+                        ),
+                        // Mostra as datas reais se existirem
+                        if (widget.task!.realStartDate != null)
+                          _buildReadOnlyField(
+                            'Início Real',
+                            '${widget.task!.realStartDate!.day}/${widget.task!.realStartDate!.month}/${widget.task!.realStartDate!.year}',
+                          ),
+                        if (widget.task!.realEndDate != null)
+                          _buildReadOnlyField(
+                            'Fim Real',
+                            '${widget.task!.realEndDate!.day}/${widget.task!.realEndDate!.month}/${widget.task!.realEndDate!.year}',
+                          ),
+                      ],
                     ],
                   ),
                 ),
@@ -312,99 +348,128 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  // Helper para criar dropdown de Tipo de Tarefa
-  Widget _buildTaskTypeDropdown() {
-    final taskTypeProvider = context.watch<TaskTypeProvider>();
-    final taskTypes = taskTypeProvider.taskTypes;
+  // --- WIDGETS AUXILIARES ---
 
-    return DropdownButtonFormField<int>(
-      value: _selectedTaskTypeId,
+  // Helper para campos de texto genéricos
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+    required bool isEnabled,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
       decoration: InputDecoration(
-        labelText: 'Tipo de Tarefa',
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        prefixIcon: const Icon(Icons.category),
-        enabled: !widget.isReadOnly,
+        labelText: label,
+        border: const OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white10,
       ),
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      enabled: isEnabled,
+      readOnly: !isEnabled,
+      validator: validator,
+    );
+  }
+
+  // Helper para criar dropdown de Tipo de Tarefa
+  Widget _buildTaskTypeDropdown(
+    List<dynamic> taskTypes,
+    String? currentValue,
+    bool isEditable,
+    Function(String?) onChanged,
+  ) {
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(
+        labelText: 'Tipo de Tarefa',
+        filled: true,
+        fillColor: Colors.white10,
+        border: OutlineInputBorder(),
+      ),
+      value: currentValue,
       items: taskTypes.map((type) {
-        return DropdownMenuItem(value: type.id, child: Text(type.name));
+        final id = (type as dynamic).id;
+        final name =
+            (type as dynamic).name ??
+            (type as dynamic).title ??
+            type.toString();
+        return DropdownMenuItem<String>(
+          value: id?.toString(),
+          child: Text(name.toString()),
+        );
       }).toList(),
-      onChanged: widget.isReadOnly
-          ? null
-          : (val) {
-              if (val != null) {
-                setState(() {
-                  _selectedTaskTypeId = val;
-                });
-              }
-            },
-      validator: (val) {
-        if (!widget.isReadOnly && val == null) {
-          return 'Selecione um tipo de tarefa';
-        }
-        return null;
-      },
+      onChanged: isEditable ? onChanged : null,
+      validator: (val) => val == null ? 'Selecione um tipo' : null,
+      isExpanded: true,
     );
   }
 
   // Helper para criar dropdown de Programador
-  Widget _buildDeveloperDropdown() {
-    final userManagementProvider = context.watch<UserManagementProvider>();
-    final developers = userManagementProvider.developers;
-
-    return DropdownButtonFormField<int>(
-      value: _selectedDeveloperId,
-      decoration: InputDecoration(
-        labelText: 'Programador Responsável',
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        prefixIcon: const Icon(Icons.person),
-        enabled: !widget.isReadOnly,
+  Widget _buildDeveloperDropdown(
+    List<AppUser> developers,
+    String? currentValue,
+    bool isEditable,
+    Function(String?) onChanged,
+  ) {
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(
+        labelText: 'Atribuir a Programador',
+        filled: true,
+        fillColor: Colors.white10,
+        border: OutlineInputBorder(),
       ),
+      value: currentValue,
       items: developers.map((dev) {
-        return DropdownMenuItem(value: dev.id, child: Text(dev.name));
+        return DropdownMenuItem<String>(
+          value: dev.id.toString(), // Assumindo ID do AppUser é String
+          child: Text(dev.name),
+        );
       }).toList(),
-      onChanged: widget.isReadOnly
-          ? null
-          : (val) {
-              if (val != null) {
-                setState(() {
-                  _selectedDeveloperId = val;
-                });
-              }
-            },
-      validator: (val) {
-        if (!widget.isReadOnly && val == null) {
-          return 'Selecione um programador';
-        }
-        return null;
-      },
+      onChanged: isEditable ? onChanged : null,
+      validator: (val) => val == null ? 'Selecione um programador' : null,
+      isExpanded: true,
     );
   }
 
-  // Helper para campos de Data
+  // Helper para campos de Data (Planeada)
   Widget _buildDatePicker(
     String label,
     DateTime? date,
-    Function(BuildContext) onTap,
+    Future<void> Function(BuildContext) onTap,
+    bool isEditable,
   ) {
-    return ListTile(
-      leading: Icon(Icons.calendar_today),
-      title: Text(label),
-      subtitle: Text(
-        date == null
-            ? 'Não definida'
-            : '${date.day}/${date.month}/${date.year}',
+    return GlassCard(
+      // Um pouco mais subtil
+      child: ListTile(
+        leading: const Icon(Icons.calendar_today),
+        title: Text(label),
+        subtitle: Text(
+          date == null
+              ? 'Não definida'
+              : '${date.day}/${date.month}/${date.year}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        trailing: isEditable ? const Icon(Icons.edit) : null,
+        onTap: isEditable ? () => onTap(context) : null,
       ),
-      trailing: widget.isReadOnly ? null : Icon(Icons.edit),
-      onTap: () => onTap(context),
     );
   }
 
-  // Helper para campos de Datas Reais (read-only)
+  // Helper para campos de Dados Reais (read-only)
   Widget _buildReadOnlyField(String label, String value) {
-    return ListTile(
-      dense: true,
-      title: Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text(value, style: TextStyle(fontSize: 16)),
+    return GlassCard(
+      child: ListTile(
+        dense: true,
+        title: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        ),
+        subtitle: Text(value, style: const TextStyle(fontSize: 16)),
+        trailing: const Icon(Icons.info_outline, size: 18),
+      ),
     );
   }
 }

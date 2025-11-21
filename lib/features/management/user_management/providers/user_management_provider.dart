@@ -11,7 +11,7 @@ class UserManagementProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
   final AuthService _authService;
 
-  List<AppUser> _users = []; // CORRIGIDO: Removido 'final'
+  List<AppUser> _users = [];
   List<Manager> _managers = [];
   List<Developer> _developers = [];
   bool _isLoading = false;
@@ -22,11 +22,10 @@ class UserManagementProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   UserManagementProvider(this._firestoreService, this._authService) {
-    _fetchUsers();
+    fetchUsers();
     fetchManagers();
     fetchDevelopers();
   }
-
   // CORREÇÃO: Tornei este método público (sem o underscore _)
   // Assim podes chamar provider.fetchUsers() noutros ecrãs se precisares
   Future<void> fetchUsers() async {
@@ -48,6 +47,15 @@ class UserManagementProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       LoggerService.error("Erro ao buscar managers", e);
+    }
+  }
+
+  Future<void> fetchDevelopers() async {
+    try {
+      _developers = await _firestoreService.getDevelopers();
+      notifyListeners();
+    } catch (e) {
+      LoggerService.error("Erro ao buscar developers", e);
     }
   }
 
@@ -127,19 +135,20 @@ class UserManagementProvider with ChangeNotifier {
       if (appUser.type == 'Manager' && manager != null) {
         final int managerId = await _firestoreService.getNextManagerId();
         Manager newManager = Manager(
-          id: "", // Firestore gera
+          id: managerId, // Firestore gera
           name: appUser.name,
           department: manager.department,
-          idUser: uid, // Liga ao Auth UID
+          idUser: userId, // Liga ao Auth UID
         );
         await _firestoreService.createManager(newManager);
       } else if (appUser.type == 'Developer' && developer != null) {
         // Mudei para Developer (estava Programador no texto antigo, mas o objeto é Developer)
+        final int developerId = await _firestoreService.getNextDeveloperId();
         Developer newDeveloper = Developer(
-          id: "", // Firestore gera
+          id: developerId, // Firestore gera
           name: appUser.name,
           experienceLevel: developer.experienceLevel,
-          idUser: uid, // Liga ao Auth UID
+          idUser: userId, // Liga ao Auth UID
           idManager: developer.idManager,
         );
         await _firestoreService.createDeveloper(newDeveloper);
