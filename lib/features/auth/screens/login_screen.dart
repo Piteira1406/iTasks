@@ -1,8 +1,7 @@
-// features/auth/screens/login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:itasks/core/services/auth_service.dart';
+import 'package:itasks/core/services/logger_service.dart';
 import 'package:itasks/features/auth/providers/login_provider.dart';
 import 'package:itasks/features/auth/widgets/login_form.dart';
 
@@ -11,6 +10,7 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    LoggerService.info('LoginScreen: A renderizar tela de login');
     // Vamos buscar o AuthService global que foi fornecido no main.dart
     final authService = context.read<AuthService>();
 

@@ -121,21 +121,14 @@ class _UserListScreenState extends State<UserListScreen> {
                             _navigateToEditScreen(context, user: user);
                           },
                         ),
-                        // Botão Apagar (Visual apenas, provider precisa do método delete)
+                        // Botão Apagar
                         IconButton(
                           icon: Icon(
                             Icons.delete,
                             color: Theme.of(context).colorScheme.error,
                           ),
                           onPressed: () {
-                            // TODO: provider.deleteUser(user.id);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Funcionalidade 'Apagar' ainda não implementada",
-                                ),
-                              ),
-                            );
+                            _showDeleteConfirmDialog(context, user);
                           },
                         ),
                       ],
@@ -148,5 +141,60 @@ class _UserListScreenState extends State<UserListScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _showDeleteConfirmDialog(BuildContext context, AppUser user) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Eliminação'),
+        content: Text(
+          'Tem certeza que deseja eliminar o utilizador "${user.name}"?\n\n'
+          'Esta ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true && context.mounted) {
+      final provider = context.read<UserManagementProvider>();
+      final error = await provider.deleteUser(
+        uid: user.uid,
+        appUser: user,
+      );
+
+      if (context.mounted) {
+        if (error == null) {
+          // Sucesso
+          await provider.fetchUsers();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Utilizador "${user.name}" eliminado com sucesso'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          // Erro
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
+    }
   }
 }

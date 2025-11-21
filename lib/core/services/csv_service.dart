@@ -1,11 +1,12 @@
-import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:itasks/core/models/task_model.dart';
 import 'package:itasks/core/services/logger_service.dart';
+
+// Conditional imports para Web e Mobile
+import 'csv_service_stub.dart'
+    if (dart.library.html) 'csv_service_web.dart'
+    if (dart.library.io) 'csv_service_mobile.dart' as platform;
 
 class CsvService {
   final DateFormat _dateTimeFormat = DateFormat('dd/MM/yyyy HH:mm');
@@ -19,15 +20,7 @@ class CsvService {
     String? customFileName,
   }) async {
     try {
-      // 1. Solicitar permissões
-      if (Platform.isAndroid) {
-        final granted = await _requestPermissions();
-        if (!granted) {
-          throw Exception('Permissões de armazenamento negadas');
-        }
-      }
-
-      // 2. Criar cabeçalhos do CSV
+      // 1. Criar cabeçalhos do CSV
       List<List<dynamic>> rows = [
         [
           'Programador',
@@ -39,7 +32,7 @@ class CsvService {
         ],
       ];
 
-      // 3. Adicionar dados das tarefas
+      // 2. Adicionar dados das tarefas
       for (var task in tasks) {
         final developerName = developerNames[task.idDeveloper] ?? 'Desconhecido (ID: ${task.idDeveloper})';
         
@@ -55,33 +48,20 @@ class CsvService {
         ]);
       }
 
-      // 4. Converter para CSV
+      // 3. Converter para CSV
       String csv = const ListToCsvConverter(
         fieldDelimiter: ';',
         eol: '\n',
       ).convert(rows);
 
-      // 5. Gerar nome do arquivo
+      // 4. Gerar nome do arquivo
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       final filename = customFileName ?? 'iTasks_Relatorio_$timestamp.csv';
 
-      // 6. Obter diretório e salvar
-      final filePath = await _saveFile(csv, filename);
-      
-      if (filePath == null) {
-        throw Exception('Não foi possível salvar o arquivo');
-      }
-
-      LoggerService.info('Arquivo CSV salvo em: $filePath');
-      
-      // 7. Compartilhar arquivo (opcional - mostra onde foi salvo)
-      await Share.shareXFiles(
-        [XFile(filePath)],
-        subject: 'Relatório iTasks',
-        text: 'Relatório exportado com sucesso!\n\nArquivo: $filename\nLocal: $filePath',
-      );
-
-      return filePath;
+      // 5. Download usando implementação da plataforma (Web ou Mobile)
+      await platform.downloadFile(csv, filename);
+      LoggerService.info('Arquivo CSV exportado: $filename');
+      return filename;
     } catch (e) {
       LoggerService.error('Erro ao exportar CSV', e);
       rethrow;
@@ -94,14 +74,6 @@ class CsvService {
     String? customFileName,
   }) async {
     try {
-      // Solicitar permissões
-      if (Platform.isAndroid) {
-        final granted = await _requestPermissions();
-        if (!granted) {
-          throw Exception('Permissões de armazenamento negadas');
-        }
-      }
-
       // Criar dados CSV
       List<List<dynamic>> rows = [
         ['Métrica', 'Valor'],
@@ -128,101 +100,12 @@ class CsvService {
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       final filename = customFileName ?? 'iTasks_Estatisticas_$timestamp.csv';
 
-      final filePath = await _saveFile(csv, filename);
-
-      if (filePath != null) {
-        await Share.shareXFiles(
-          [XFile(filePath)],
-          subject: 'Estatísticas iTasks',
-          text: 'Estatísticas exportadas!\n\nArquivo: $filename\nLocal: $filePath',
-        );
-      }
-
-      return filePath;
+      await platform.downloadFile(csv, filename);
+      LoggerService.info('Arquivo CSV de estatísticas exportado: $filename');
+      return filename;
     } catch (e) {
       LoggerService.error('Erro ao exportar estatísticas', e);
       rethrow;
-    }
-  }
-
-  /// Salva arquivo no diretório apropriado
-  Future<String?> _saveFile(String content, String filename) async {
-    try {
-      Directory? directory;
-
-      if (Platform.isAndroid) {
-        // Android: Tentar salvar em Downloads
-        directory = Directory('/storage/emulated/0/Download');
-        
-        if (!await directory.exists()) {
-          // Fallback para external storage
-          directory = await getExternalStorageDirectory();
-        }
-      } else if (Platform.isIOS) {
-        // iOS: Salvar em Documents
-        directory = await getApplicationDocumentsDirectory();
-      } else {
-        // Desktop/Web: Tentar Downloads, senão Documents
-        directory = await getDownloadsDirectory();
-        directory ??= await getApplicationDocumentsDirectory();
-      }
-
-      if (directory == null) {
-        throw Exception('Não foi possível acessar o diretório');
-      }
-
-      // Criar arquivo
-      final filePath = '${directory.path}/$filename';
-      final file = File(filePath);
-      await file.writeAsString(content);
-
-      return filePath;
-    } catch (e) {
-      LoggerService.error('Erro ao salvar arquivo', e);
-      return null;
-    }
-  }
-
-  /// Solicita permissões de armazenamento
-  Future<bool> _requestPermissions() async {
-    try {
-      if (Platform.isAndroid) {
-        // Android 13+ (API 33+) usa permissões diferentes
-        if (await Permission.photos.request().isGranted ||
-            await Permission.videos.request().isGranted) {
-          return true;
-        }
-
-        // Tentar permissão legada
-        if (await Permission.storage.request().isGranted) {
-          return true;
-        }
-
-        // Última tentativa: manage external storage
-        if (await Permission.manageExternalStorage.request().isGranted) {
-          return true;
-        }
-
-        return false;
-      }
-      return true; // iOS não precisa de permissão explícita
-    } catch (e) {
-      LoggerService.error('Erro ao solicitar permissões', e);
-      return false;
-    }
-  }
-
-  /// Traduz status para português
-  String _translateStatus(String status) {
-    switch (status) {
-      case 'ToDo':
-        return 'A Fazer';
-      case 'Doing':
-        return 'Em Progresso';
-      case 'Done':
-        return 'Concluído';
-      default:
-        return status;
     }
   }
 
@@ -231,29 +114,5 @@ class CsvService {
     final hours = duration.inHours;
     final minutes = duration.inMinutes % 60;
     return '${hours}h ${minutes}m';
-  }
-
-  /// Método legado para compatibilidade (DEPRECATED)
-  @Deprecated('Use exportTasksToCSV instead')
-  Future<bool> generateAndShareCsv(
-    List<List<dynamic>> rows,
-    String fileName,
-  ) async {
-    try {
-      String csvData = const ListToCsvConverter().convert(rows);
-      final Directory tempDir = await getTemporaryDirectory();
-      final String filePath = '${tempDir.path}/$fileName';
-      final File file = File(filePath);
-      await file.writeAsString(csvData);
-      
-      final result = await Share.shareXFiles([
-        XFile(filePath),
-      ], subject: 'Relatório iTasks: $fileName');
-      
-      return result.status == ShareResultStatus.success;
-    } catch (e) {
-      LoggerService.error("Failed to generate or share CSV", e);
-      return false;
-    }
   }
 }

@@ -5,12 +5,14 @@ class Manager {
   final String name;
   final String department;
   final int idUser;
+  final String? docId; // Document ID do Firestore
 
   Manager({
     required this.id,
     required this.name,
     required this.department,
     required this.idUser,
+    this.docId,
   });
 
   Map<String, dynamic> toMap() {
@@ -20,10 +22,18 @@ class Manager {
   factory Manager.fromFirestore(DocumentSnapshot doc) {
     final map = doc.data() as Map<String, dynamic>;
     return Manager(
-      id: map['id'] ?? 0,
+      id: _parseInt(map['id']),
       name: map['name'] ?? '',
       department: map['department'] ?? '',
-      idUser: map['idUser'] ?? 0,
+      idUser: _parseInt(map['idUser']),
+      docId: doc.id,
     );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 }

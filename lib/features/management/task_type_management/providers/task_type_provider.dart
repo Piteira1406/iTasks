@@ -7,10 +7,7 @@ enum TaskTypeState { idle, loading, error }
 class TaskTypeProvider extends ChangeNotifier {
   final FirestoreService _firestoreService;
 
-  TaskTypeProvider(this._firestoreService) {
-    // Começa a "ouvir" os dados assim que o provider é criado
-    fetchTaskTypes();
-  }
+  TaskTypeProvider(this._firestoreService);
 
   TaskTypeState _state = TaskTypeState.idle;
   TaskTypeState get state => _state;
@@ -68,16 +65,18 @@ class TaskTypeProvider extends ChangeNotifier {
   }
 
   // 3. Apagar dados
-  Future<void> deleteTaskType(int id) async {
+  Future<void> deleteTaskType(TaskTypeModel taskType) async {
     _setState(TaskTypeState.loading);
     try {
-      // Chama o método que adicionámos ao serviço
-      // Converte int para String para o Firestore
-      await _firestoreService.deleteTaskType(id.toString());
-      // O Stream vai atualizar a lista automaticamente
+      // Usa o docId se disponível, senão usa o id convertido para string
+      final docIdToDelete = taskType.docId ?? taskType.id.toString();
+      
+      await _firestoreService.deleteTaskType(docIdToDelete);
+      
       _setState(TaskTypeState.idle);
     } catch (e) {
       _setError(e.toString());
+      rethrow; // Re-lança o erro para o UI poder mostrar
     }
   }
 

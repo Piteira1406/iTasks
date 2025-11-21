@@ -3,6 +3,7 @@ import 'package:itasks/core/services/firestore_service.dart';
 import 'package:itasks/core/services/logger_service.dart';
 import 'package:itasks/core/models/task_model.dart';
 import 'package:itasks/core/models/app_user_model.dart';
+import 'package:itasks/core/models/task_type_model.dart';
 
 class TaskDetailsProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
@@ -11,12 +12,12 @@ class TaskDetailsProvider with ChangeNotifier {
   List<AppUser> _developersList = [];
 
   // CORREÇÃO: Agora é uma Lista de TaskType, não dynamic
-  List<Task> _taskTypesList = [];
+  List<TaskTypeModel> _taskTypesList = [];
 
   List<AppUser> get developersList => _developersList;
 
   // CORREÇÃO: O getter também devolve List<TaskType>
-  List<Task> get taskTypesList => _taskTypesList;
+  List<TaskTypeModel> get taskTypesList => _taskTypesList;
 
   // --- Estado do Formulário ---
   String _description = '';
@@ -34,6 +35,15 @@ class TaskDetailsProvider with ChangeNotifier {
   // Datas
   DateTime _plannedStartDate = DateTime.now();
   DateTime _plannedEndDate = DateTime.now().add(const Duration(days: 1));
+  
+  DateTime get plannedStartDate => _plannedStartDate;
+  DateTime get plannedEndDate => _plannedEndDate;
+
+  // Dados originais da task (para preservar ao editar)
+  String? _originalTaskStatus;
+  DateTime? _originalCreationDate;
+  DateTime? _originalRealStartDate;
+  DateTime? _originalRealEndDate;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -43,13 +53,12 @@ class TaskDetailsProvider with ChangeNotifier {
   // --- 1. Carregar Listas (Dropdowns) ---
   Future<void> loadDropdownData() async {
     try {
-      // Buscar utilizadores que são 'Programador'
+      // Buscar utilizadores que são 'Developer'
       final allUsers = await _firestoreService.getUsers();
-      _developersList = allUsers.where((u) => u.type == 'Programador').toList();
+      _developersList = allUsers.where((u) => u.type == 'Developer').toList();
 
       // Buscar Tipos de Tarefa REAIS da BD
-      // O teu FirestoreService já deve ter este método a devolver List<TaskType>
-      _taskTypesList = await _firestoreService.getTask();
+      _taskTypesList = await _firestoreService.getTaskTypes();
 
       notifyListeners();
     } catch (e) {
@@ -66,6 +75,13 @@ class TaskDetailsProvider with ChangeNotifier {
     _selectedTaskTypeId = task.idTaskType;
     _plannedStartDate = task.previsionStartDate;
     _plannedEndDate = task.previsionEndDate;
+    
+    // Guardar dados originais para preservar ao salvar
+    _originalTaskStatus = task.taskStatus;
+    _originalCreationDate = task.creationDate;
+    _originalRealStartDate = task.realStartDate;
+    _originalRealEndDate = task.realEndDate;
+    
     notifyListeners();
   }
 
@@ -78,6 +94,13 @@ class TaskDetailsProvider with ChangeNotifier {
     _selectedTaskTypeId = null;
     _plannedStartDate = DateTime.now();
     _plannedEndDate = DateTime.now().add(const Duration(days: 1));
+    
+    // Limpar dados originais
+    _originalTaskStatus = null;
+    _originalCreationDate = null;
+    _originalRealStartDate = null;
+    _originalRealEndDate = null;
+    
     notifyListeners();
   }
 
@@ -102,6 +125,16 @@ class TaskDetailsProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void setPlannedStartDate(DateTime val) {
+    _plannedStartDate = val;
+    notifyListeners();
+  }
+
+  void setPlannedEndDate(DateTime val) {
+    _plannedEndDate = val;
+    notifyListeners();
+  }
+
   // --- 4. Salvar ---
   Future<bool> saveTask(String managerId, {String? existingTaskId}) async {
     _isLoading = true;
@@ -120,23 +153,22 @@ class TaskDetailsProvider with ChangeNotifier {
       description: _description,
       storyPoints: _storyPoints,
       order: _executionOrder,
-      taskStatus: 'ToDo',
+      taskStatus: _originalTaskStatus ?? 'ToDo', // Preserva status original ou usa 'ToDo' para novas
       idManager: int.parse(managerId),
       idDeveloper: _selectedDeveloperId!,
       idTaskType: _selectedTaskTypeId!,
-      creationDate: DateTime.now(),
+      creationDate: _originalCreationDate ?? DateTime.now(), // Preserva data criação
       previsionStartDate: _plannedStartDate,
       previsionEndDate: _plannedEndDate,
-      realStartDate: DateTime(1970),
-      realEndDate: DateTime(1970),
+      realStartDate: _originalRealStartDate, // Preserva data real início
+      realEndDate: _originalRealEndDate, // Preserva data real fim
     );
 
     try {
       if (existingTaskId == null) {
         await _firestoreService.createTask(taskToSave);
       } else {
-        // TODO: Implementar updateTask se necessário
-        // await _firestoreService.updateTask(taskToSave);
+        await _firestoreService.updateTask(taskToSave);
       }
 
       _isLoading = false;

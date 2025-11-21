@@ -33,10 +33,6 @@ import 'features/management/task_type_management/screens/task_type_screen.dart';
 // Importar o Modelo de Tarefa é necessário para a rota /task_details
 import 'core/models/task_model.dart';
 
-// O AuthStatus deveria vir do auth_provider.dart, mas é definido aqui para garantir
-// que o AuthWrapper funciona, caso não tenha sido exportado.
-enum AuthStatus { uninitialized, authenticated, unauthenticated }
-
 // Ponto de entrada da aplicação
 Future<void> main() async {
   // 1. Garantir que o Flutter está pronto
@@ -150,7 +146,7 @@ class ITasksApp extends StatelessWidget {
     );
   }
 }
-
+//LOGS DEBUG
 // Este widget "ouve" o AuthProvider e mostra o ecrã correto:
 // Loading (Inicial) -> Login (Não Autenticado) -> Kanban (Autenticado)
 class AuthWrapper extends StatelessWidget {
@@ -159,15 +155,21 @@ class AuthWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    
+    print('🔍 AuthWrapper: STATUS = ${authProvider.status}');
 
     switch (authProvider.status) {
       case AuthStatus.authenticated:
+        print('🔍 AuthWrapper: Mostrando KanbanScreen');
         return const KanbanScreen();
       case AuthStatus.unauthenticated:
+        print('🔍 AuthWrapper: Mostrando LoginScreen');
         return const LoginScreen();
       case AuthStatus.uninitialized:
+        print('🔍 AuthWrapper: Mostrando CircularProgressIndicator');
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       default: // fallback to satisfy exhaustiveness
+        print('🔍 AuthWrapper: DEFAULT - Mostrando CircularProgressIndicator');
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
   }

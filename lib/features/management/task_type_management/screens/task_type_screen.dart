@@ -57,24 +57,96 @@ class _TaskTypeScreenState extends State<TaskTypeScreen> {
 
   // Função de Apagar (agora usa o Provider)
   void _deleteType(TaskTypeModel taskType) {
-    // TODO: Mostrar um diálogo de confirmação "Tem a certeza?"
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirmar Eliminação'),
+        content: Text(
+          'Tem a certeza que deseja eliminar o tipo "${taskType.name}"?\n\nID: ${taskType.id}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              
+              try {
+                await context.read<TaskTypeProvider>().deleteTaskType(taskType);
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Tipo de tarefa eliminado com sucesso!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+                
+                // Recarregar a lista
+                await context.read<TaskTypeProvider>().fetchTaskTypes();
+              } catch (e) {
+                print('DEBUG: Erro ao apagar: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erro ao eliminar: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 
-    // Usa o Provider para apagar
-    context.read<TaskTypeProvider>().deleteTaskType(taskType.id);
+  // Função para criar tipos padrão
+  Future<void> _createDefaultTaskTypes(BuildContext context) async {
+    final provider = context.read<TaskTypeProvider>();
+    
+    final defaultTypes = [
+      'Bug',
+      'Feature',
+      'Melhoria',
+      'Documentação',
+      'Teste',
+    ];
+    
+    for (final typeName in defaultTypes) {
+      await provider.saveTaskType(name: typeName);
+    }
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${defaultTypes.length} tipos de tarefa criados com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+    
+    // Recarregar a lista
+    await provider.fetchTaskTypes();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Gestão de Tipos de Tarefa'),
+        title: const Text('Gestão de Tipos de Tarefa'),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () =>
             _showEditDialog(context), // Criar novo (taskType: null)
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
       ),
       body:
           // Usa o Consumer para "ouvir" as mudanças do Provider
@@ -97,9 +169,32 @@ class _TaskTypeScreenState extends State<TaskTypeScreen> {
 
               // 3. Estado Sucesso (Vazio)
               if (taskTypes.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'Nenhum tipo de tarefa encontrado.\nClique no "+" para adicionar um.',
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Nenhum tipo de tarefa encontrado.',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        onPressed: () => _createDefaultTaskTypes(context),
+                        icon: const Icon(Icons.auto_awesome),
+                        label: const Text('Criar Tipos Padrão'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'ou clique no "+" para adicionar manualmente.',
+                        style: TextStyle(fontSize: 14, color: Colors.white70),
+                      ),
+                    ],
                   ),
                 );
               }
@@ -119,18 +214,19 @@ class _TaskTypeScreenState extends State<TaskTypeScreen> {
                           child: ListTile(
                             title: Text(task.name),
                             subtitle: Text(
-                              task.id.toString(),
-                            ), // Mostra o ID real do Firestore
+                              'ID: ${task.id} | DocID: ${task.docId ?? "null"}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 // Botão Editar
                                 IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.white70),
+                                  icon: const Icon(Icons.edit, color: Colors.white70),
                                   onPressed: () => _showEditDialog(
                                     context,
                                     taskType: task,
-                                  ), // Editar
+                                  ),
                                 ),
                                 // Botão Apagar
                                 IconButton(
@@ -138,7 +234,7 @@ class _TaskTypeScreenState extends State<TaskTypeScreen> {
                                     Icons.delete,
                                     color: Theme.of(context).colorScheme.error,
                                   ),
-                                  onPressed: () => _deleteType(task), // Apagar
+                                  onPressed: () => _deleteType(task),
                                 ),
                               ],
                             ),

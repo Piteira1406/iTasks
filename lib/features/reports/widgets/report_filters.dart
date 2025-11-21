@@ -72,7 +72,7 @@ class ReportFilters extends StatelessWidget {
             // Filtro por Gestor
             if (reportProvider.selectedReportType == ReportType.completedTasksByManager ||
                 reportProvider.selectedReportType == ReportType.ongoingTasks) ...[
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<int>(
                 value: reportProvider.selectedManagerId,
                 decoration: const InputDecoration(
                   labelText: 'Gestor',
@@ -86,7 +86,7 @@ class ReportFilters extends StatelessWidget {
                   ),
                   ...reportProvider.managers.map((manager) {
                     return DropdownMenuItem(
-                      value: manager.id.toString(),
+                      value: manager.id,
                       child: Text(manager.name),
                     );
                   }).toList(),
@@ -98,7 +98,7 @@ class ReportFilters extends StatelessWidget {
 
             // Filtro por Programador
             if (reportProvider.selectedReportType == ReportType.completedTasksByDeveloper) ...[
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<int>(
                 value: reportProvider.selectedDeveloperId,
                 decoration: const InputDecoration(
                   labelText: 'Programador',
@@ -112,7 +112,7 @@ class ReportFilters extends StatelessWidget {
                   ),
                   ...reportProvider.developers.map((dev) {
                     return DropdownMenuItem(
-                      value: dev.id.toString(),
+                      value: dev.id,
                       child: Text(dev.name),
                     );
                   }).toList(),

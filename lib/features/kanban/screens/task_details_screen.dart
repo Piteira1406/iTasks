@@ -21,12 +21,9 @@ class TaskDetailsScreen extends StatefulWidget {
 class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controladores que apenas lidam com a interface de input de texto.
-  // O estado real reside no Provider, estes apenas refletem/atualizam.
-  late final TextEditingController _descController;
-  late final TextEditingController _pointsController;
-
-  // Nota: _orderController foi removido pois não é usado em nenhuma lógica ou widget no código original.
+  // Controladores inicializados com valores vazios
+  final TextEditingController _descController = TextEditingController();
+  final TextEditingController _pointsController = TextEditingController();
 
   bool get _isCreating => widget.task == null;
 
@@ -48,11 +45,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         provider.clearForm(); // Limpar se for nova
       }
 
-      // 3. Inicializar Controllers e definir Listeners após carregar o estado
-      _descController = TextEditingController(text: provider.description);
-      _pointsController = TextEditingController(
-        text: provider.storyPoints > 0 ? provider.storyPoints.toString() : '',
-      );
+      // 3. Atualizar Controllers com os dados carregados
+      _descController.text = provider.description;
+      _pointsController.text = provider.storyPoints > 0 ? provider.storyPoints.toString() : '';
 
       // Adicionar Listeners para atualizar o Provider em tempo real
       _descController.addListener(
@@ -139,23 +134,22 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     if (widget.isReadOnly) return;
 
     final provider = context.read<TaskDetailsProvider>();
-    // Usa a data atual do provider (cast a dynamic para evitar erro de nomes diferentes no provider)
     final initialDate = isStartDate
-        ? (provider as dynamic).plannedStartDate
-        : (provider as dynamic).plannedEndDate;
+        ? provider.plannedStartDate
+        : provider.plannedEndDate;
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: initialDate ?? DateTime.now(),
+      initialDate: initialDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
     );
 
     if (picked != null && mounted) {
       if (isStartDate) {
-        (provider as dynamic).setPlannedStartDate(picked);
+        provider.setPlannedStartDate(picked);
       } else {
-        (provider as dynamic).setPlannedEndDate(picked);
+        provider.setPlannedEndDate(picked);
       }
 
       // Validação de datas como no código original (adaptado para usar o Provider)
@@ -165,20 +159,17 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   // Método para validar datas (adaptado para usar o Provider)
   void _validateDates(TaskDetailsProvider provider) {
-    final dyn = provider as dynamic;
-    if (dyn.plannedStartDate != null && dyn.plannedEndDate != null) {
-      if (dyn.plannedEndDate!.isBefore(dyn.plannedStartDate!)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Data de fim deve ser posterior à data de início. Ajustada.',
-            ),
-            backgroundColor: Colors.orange,
+    if (provider.plannedEndDate.isBefore(provider.plannedStartDate)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Data de fim deve ser posterior à data de início. Ajustada.',
           ),
-        );
-        // Ajusta a data de fim para ser igual à data de início
-        dyn.setPlannedEndDate(dyn.plannedStartDate);
-      }
+          backgroundColor: Colors.orange,
+        ),
+      );
+      // Ajusta a data de fim para ser igual à data de início
+      provider.setPlannedEndDate(provider.plannedStartDate);
     }
   }
 
@@ -186,7 +177,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   Widget build(BuildContext context) {
     // Ouve o Provider para reagir a alterações de estado
     final provider = context.watch<TaskDetailsProvider>();
-    final dynProvider = provider as dynamic;
     final authProvider = context.read<AuthProvider>();
 
     final isEditing = widget.task != null;
@@ -194,7 +184,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     final isEditable = !widget.isReadOnly && isManager;
 
     // Se o Provider ainda não carregou os dados iniciais
-    if (dynProvider.isLoadingInitialData) {
+    if (provider.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
@@ -208,10 +198,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           // Botão Guardar visível apenas se for editável
           if (isEditable)
             IconButton(
-              icon: dynProvider.isSaving
+              icon: provider.isLoading
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Icon(Icons.save),
-              onPressed: dynProvider.isSaving ? null : _saveForm,
+              onPressed: provider.isLoading ? null : _saveForm,
             ),
         ],
       ),
@@ -275,22 +265,18 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       // --- Dropdown: Tipo de Tarefa ---
                       _buildTaskTypeDropdown(
                         provider.taskTypesList,
-                        provider.selectedTaskTypeId?.toString(),
+                        provider.selectedTaskTypeId,
                         isEditable,
-                        (val) => provider.setTaskTypeId(
-                          val == null ? null : int.tryParse(val),
-                        ),
+                        (val) => provider.setTaskTypeId(val),
                       ),
                       const SizedBox(height: 20),
 
                       // --- Dropdown: Programador ---
                       _buildDeveloperDropdown(
                         provider.developersList,
-                        provider.selectedDeveloperId?.toString(),
+                        provider.selectedDeveloperId,
                         isEditable,
-                        (val) => provider.setDeveloperId(
-                          val == null ? null : int.tryParse(val),
-                        ),
+                        (val) => provider.setDeveloperId(val),
                       ),
                       const SizedBox(height: 20),
 
@@ -301,14 +287,14 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       ),
                       _buildDatePicker(
                         'Início Planeado',
-                        dynProvider.plannedStartDate,
+                        provider.plannedStartDate,
                         (context) =>
                             _selectDate(context, true), // isStartDate = true
                         isEditable,
                       ),
                       _buildDatePicker(
                         'Fim Planeado',
-                        dynProvider.plannedEndDate,
+                        provider.plannedEndDate,
                         (context) =>
                             _selectDate(context, false), // isStartDate = false
                         isEditable,
@@ -378,26 +364,38 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   // Helper para criar dropdown de Tipo de Tarefa
   Widget _buildTaskTypeDropdown(
     List<dynamic> taskTypes,
-    String? currentValue,
+    int? currentValue,
     bool isEditable,
-    Function(String?) onChanged,
+    Function(int?) onChanged,
   ) {
-    return DropdownButtonFormField<String>(
+    // Filtrar apenas task types com IDs válidos e únicos
+    final validTypes = <int, dynamic>{};
+    for (var type in taskTypes) {
+      final id = (type as dynamic).id as int?;
+      if (id != null && id > 0 && !validTypes.containsKey(id)) {
+        validTypes[id] = type;
+      }
+    }
+    
+    // Se o currentValue não existe na lista, limpar
+    final safeValue = validTypes.containsKey(currentValue) ? currentValue : null;
+    
+    return DropdownButtonFormField<int>(
       decoration: const InputDecoration(
         labelText: 'Tipo de Tarefa',
         filled: true,
         fillColor: Colors.white10,
         border: OutlineInputBorder(),
       ),
-      value: currentValue,
-      items: taskTypes.map((type) {
-        final id = (type as dynamic).id;
+      value: safeValue,
+      items: validTypes.entries.map((entry) {
+        final type = entry.value;
         final name =
             (type as dynamic).name ??
             (type as dynamic).title ??
             type.toString();
-        return DropdownMenuItem<String>(
-          value: id?.toString(),
+        return DropdownMenuItem<int>(
+          value: entry.key,
           child: Text(name.toString()),
         );
       }).toList(),
@@ -410,22 +408,33 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   // Helper para criar dropdown de Programador
   Widget _buildDeveloperDropdown(
     List<AppUser> developers,
-    String? currentValue,
+    int? currentValue,
     bool isEditable,
-    Function(String?) onChanged,
+    Function(int?) onChanged,
   ) {
-    return DropdownButtonFormField<String>(
+    // Filtrar apenas developers com IDs válidos e únicos
+    final validDevs = <int, AppUser>{};
+    for (var dev in developers) {
+      if (dev.id > 0) {
+        validDevs[dev.id] = dev;
+      }
+    }
+    
+    // Se o currentValue não existe na lista, limpar
+    final safeValue = validDevs.containsKey(currentValue) ? currentValue : null;
+    
+    return DropdownButtonFormField<int>(
       decoration: const InputDecoration(
         labelText: 'Atribuir a Programador',
         filled: true,
         fillColor: Colors.white10,
         border: OutlineInputBorder(),
       ),
-      value: currentValue,
-      items: developers.map((dev) {
-        return DropdownMenuItem<String>(
-          value: dev.id.toString(), // Assumindo ID do AppUser é String
-          child: Text(dev.name),
+      value: safeValue,
+      items: validDevs.entries.map((entry) {
+        return DropdownMenuItem<int>(
+          value: entry.key,
+          child: Text(entry.value.name),
         );
       }).toList(),
       onChanged: isEditable ? onChanged : null,

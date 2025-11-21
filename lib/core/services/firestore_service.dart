@@ -216,7 +216,7 @@ class FirestoreService {
     await _db.collection(tasksCollection).doc(task.id).update(task.toMap());
   }
 
-  Future<List<Task>> getCompletedTasksForManager(String managerId) async {
+  Future<List<Task>> getCompletedTasksForManager(int managerId) async {
     final querySnapshot = await _db
         .collection(tasksCollection)
         .where('idManager', isEqualTo: managerId)
@@ -226,7 +226,7 @@ class FirestoreService {
     return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
   }
 
-  Future<List<Task>> getOngoingTasksForManager(String managerId) async {
+  Future<List<Task>> getOngoingTasksForManager(int managerId) async {
     final querySnapshot = await _db
         .collection(tasksCollection)
         .where('idManager', isEqualTo: managerId)
@@ -236,7 +236,7 @@ class FirestoreService {
     return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
   }
 
-  Future<List<Task>> getCompletedTasksForDeveloper(String developerId) async {
+  Future<List<Task>> getCompletedTasksForDeveloper(int developerId) async {
     final querySnapshot = await _db
         .collection(tasksCollection)
         .where('idDeveloper', isEqualTo: developerId)
@@ -246,7 +246,7 @@ class FirestoreService {
     return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
   }
 
-  Future<List<Task>> getTasksByDeveloper(String developerId) async {
+  Future<List<Task>> getTasksByDeveloper(int developerId) async {
     final querySnapshot = await _db
         .collection(tasksCollection)
         .where('idDeveloper', isEqualTo: developerId)
@@ -296,9 +296,10 @@ class FirestoreService {
   }
 
   Future<void> updateManager(Manager manager) async {
+    final docId = manager.docId ?? manager.id.toString();
     await _db
         .collection(managersCollection)
-        .doc(manager.id.toString())
+        .doc(docId)
         .update(manager.toMap());
   }
 
@@ -307,9 +308,10 @@ class FirestoreService {
   }
 
   Future<void> updateDeveloper(Developer developer) async {
+    final docId = developer.docId ?? developer.id.toString();
     await _db
         .collection(developersCollection)
-        .doc(developer.id.toString().toString())
+        .doc(docId)
         .update(developer.toMap());
   }
 
@@ -413,19 +415,27 @@ class FirestoreService {
   }
 
   Future<void> updateTaskType(TaskTypeModel taskType) async {
-    // Usa o ID do modelo para saber qual documento atualizar
+    // Usa o docId se disponível, senão usa o id convertido
+    final docId = taskType.docId ?? taskType.id.toString();
+    LoggerService.info('FirestoreService: Atualizando task type com docId: $docId');
+    
     await _db
         .collection(taskTypesCollection)
-        .doc(taskType.id.toString()) // Adicione .toString()
+        .doc(docId)
         .update(taskType.toMap());
   }
 
   Future<void> deleteTaskType(String taskTypeId) async {
-    await _db
-        .collection(
-          taskTypesCollection,
-        ) // <-- CORRIGIDO: de 'TaskType' para a constante
-        .doc(taskTypeId)
-        .delete();
+    LoggerService.info('FirestoreService: Tentando apagar task type com ID: $taskTypeId');
+    try {
+      await _db
+          .collection(taskTypesCollection)
+          .doc(taskTypeId)
+          .delete();
+      LoggerService.info('FirestoreService: Task type $taskTypeId apagado com sucesso');
+    } catch (e) {
+      LoggerService.error('FirestoreService: Erro ao apagar task type $taskTypeId', e);
+      rethrow;
+    }
   }
 }

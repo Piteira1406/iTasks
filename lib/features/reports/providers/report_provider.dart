@@ -39,8 +39,8 @@ class ReportProvider extends ChangeNotifier {
   
   // Filtros
   ReportType _selectedReportType = ReportType.completedTasksByManager;
-  String? _selectedManagerId;
-  String? _selectedDeveloperId;
+  int? _selectedManagerId;
+  int? _selectedDeveloperId;
   String? _selectedStatus;
   DateTime? _startDate;
   DateTime? _endDate;
@@ -54,8 +54,8 @@ class ReportProvider extends ChangeNotifier {
   List<Manager> get managers => _managers;
   List<TaskTypeModel> get taskTypes => _taskTypes;
   ReportType get selectedReportType => _selectedReportType;
-  String? get selectedManagerId => _selectedManagerId;
-  String? get selectedDeveloperId => _selectedDeveloperId;
+  int? get selectedManagerId => _selectedManagerId;
+  int? get selectedDeveloperId => _selectedDeveloperId;
   String? get selectedStatus => _selectedStatus;
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
@@ -111,12 +111,12 @@ class ReportProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setSelectedManager(String? managerId) {
+  void setSelectedManager(int? managerId) {
     _selectedManagerId = managerId;
     notifyListeners();
   }
 
-  void setSelectedDeveloper(String? developerId) {
+  void setSelectedDeveloper(int? developerId) {
     _selectedDeveloperId = developerId;
     notifyListeners();
   }

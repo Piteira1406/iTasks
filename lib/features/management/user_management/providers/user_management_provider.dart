@@ -21,11 +21,8 @@ class UserManagementProvider with ChangeNotifier {
   List<Developer> get developers => _developers;
   bool get isLoading => _isLoading;
 
-  UserManagementProvider(this._firestoreService, this._authService) {
-    fetchUsers();
-    fetchManagers();
-    fetchDevelopers();
-  }
+  UserManagementProvider(this._firestoreService, this._authService);
+  
   // CORREÇÃO: Tornei este método público (sem o underscore _)
   // Assim podes chamar provider.fetchUsers() noutros ecrãs se precisares
   Future<void> fetchUsers() async {
@@ -52,7 +49,7 @@ class UserManagementProvider with ChangeNotifier {
 
   Future<void> fetchDevelopers() async {
     try {
-      _developers = await _firestoreService.getDevelopers();
+      _developers = await _firestoreService.getAllDevelopers();
       notifyListeners();
     } catch (e) {
       LoggerService.error("Erro ao buscar developers", e);
@@ -122,7 +119,8 @@ class UserManagementProvider with ChangeNotifier {
 
       // 3.1 Criar o AppUser (na coleção 'Users')
       AppUser newUser = AppUser(
-        id: uid.hashCode,
+        id: userId,
+        uid: uid, // Firebase Auth UID
         name: appUser.name,
         username: appUser.username,
         email: email,
@@ -234,13 +232,20 @@ class UserManagementProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      LoggerService.info('deleteUser: uid=$uid, type=${appUser.type}');
+      
       // Check if user has assigned tasks
       if (appUser.type == 'Developer') {
+        LoggerService.info('Verificando tarefas do developer...');
         final developer = await _firestoreService.getDeveloperByUserId(uid);
+        LoggerService.info('Developer encontrado: ${developer?.id}');
+        
         if (developer != null) {
           final tasks = await _firestoreService.getTasksByDeveloper(
-            developer.id.toString(),
+            developer.id,
           );
+          LoggerService.info('Tarefas encontradas: ${tasks.length}');
+          
           if (tasks.isNotEmpty) {
             _isLoading = false;
             notifyListeners();
@@ -252,12 +257,17 @@ class UserManagementProvider with ChangeNotifier {
 
       // Check if Manager has developers assigned
       if (appUser.type == 'Manager') {
+        LoggerService.info('Verificando developers do manager...');
         final manager = await _firestoreService.getManagerByUserId(uid);
+        LoggerService.info('Manager encontrado: ${manager?.id}');
+        
         if (manager != null) {
           final allDevelopers = await _firestoreService.getAllDevelopers();
           final assignedDevs = allDevelopers
               .where((d) => d.idManager == manager.id)
               .toList();
+          LoggerService.info('Developers atribuídos: ${assignedDevs.length}');
+          
           if (assignedDevs.isNotEmpty) {
             _isLoading = false;
             notifyListeners();
@@ -268,6 +278,7 @@ class UserManagementProvider with ChangeNotifier {
       }
 
       // Perform cascade delete
+      LoggerService.info('Executando deleteUserComplete...');
       await _firestoreService.deleteUserComplete(
         uid: uid,
         appUser: appUser,
@@ -275,9 +286,7 @@ class UserManagementProvider with ChangeNotifier {
             false, // Don't delete from Auth - only managers can do this
       );
 
-      // TODO: If current user is admin/manager, also delete from Firebase Auth
-      // This requires admin SDK or reauthentication
-
+      LoggerService.info('Delete concluído com sucesso');
       _isLoading = false;
       notifyListeners();
       return null; // Success

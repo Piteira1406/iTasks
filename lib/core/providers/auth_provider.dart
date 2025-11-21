@@ -37,10 +37,21 @@ class AuthProvider with ChangeNotifier {
   bool get isDeveloper => _appUser?.type == 'Developer';
 
   AuthProvider(this._authService, this._firestoreService) {
+    LoggerService.info('AuthProvider: Inicializando e escutando authStateChanges');
+    
+    // Verificar imediatamente se há user logado
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) {
+      _status = AuthStatus.unauthenticated;
+      LoggerService.info('AuthProvider: Nenhum user logado inicialmente - STATUS: ${_status}');
+      notifyListeners(); // IMPORTANTE: Notificar para o AuthWrapper atualizar
+    }
+    
     _authService.authStateChanges.listen(_onAuthStateChanged);
   }
 
   Future<void> _onAuthStateChanged(User? user) async {
+    LoggerService.info('AuthProvider: authStateChanged - user: ${user?.email ?? "null"}');
     // Limpar dados ao fazer logout
     if (user == null) {
       _status = AuthStatus.unauthenticated;
@@ -58,8 +69,10 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> _fetchAppUser(String uid) async {
+    LoggerService.info('AuthProvider: Buscando AppUser para uid: $uid');
     // 1. Buscar o AppUser (da coleção 'Users')
     _appUser = await _firestoreService.getUserById(uid);
+    LoggerService.info('AuthProvider: AppUser encontrado: ${_appUser?.name}');
 
     // 2. CORRIGIDO: Buscar o perfil específico (Manager ou Developer)
     if (_appUser != null) {

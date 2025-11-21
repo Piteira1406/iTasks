@@ -288,7 +288,16 @@ class _KanbanScreenState extends State<KanbanScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       // Certifica-te que a rota '/users' existe no main.dart
-                      Navigator.pushNamed(context, '/users');
+                      Navigator.pushNamed(context, '/user_management');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.report),
+                    title: const Text('Relatórios'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      // Certifica-te que a rota '/reports' existe no main.dart
+                      Navigator.pushNamed(context, '/reports');
                     },
                   ),
                 ],
