@@ -152,7 +152,7 @@ class KanbanProvider with ChangeNotifier {
     // Guarda o estado anterior para rollback
     final oldTask = task;
     final taskIndexInMainList = _tasks.indexWhere((t) => t.id == task.id);
-    
+
     if (taskIndexInMainList != -1) {
       _tasks[taskIndexInMainList] = task.copyWith(taskStatus: newStatus);
     }
@@ -163,7 +163,12 @@ class KanbanProvider with ChangeNotifier {
       await _firestoreService.updateTaskState(task.id, newStatus);
       // Reordenar (atualizar a 'order') no Firestore se necessário
       if (newItemIndex != oldItemIndex) {
-        await _reorderTasks(oldListIndex, newListIndex, oldItemIndex, newItemIndex);
+        await _reorderTasks(
+          oldListIndex,
+          newListIndex,
+          oldItemIndex,
+          newItemIndex,
+        );
       }
     } catch (e) {
       // ROLLBACK: Reverte a UI para o estado anterior
@@ -184,10 +189,10 @@ class KanbanProvider with ChangeNotifier {
     // Get the appropriate list based on the status
     final List<String> listMap = ['ToDo', 'Doing', 'Done'];
     final String newStatus = listMap[newListIndex];
-    
+
     // Get all tasks in the target column sorted by order
     final tasksInColumn = _getSortedList(newStatus);
-    
+
     // Update order for all affected tasks
     for (int i = 0; i < tasksInColumn.length; i++) {
       if (tasksInColumn[i].order != i) {

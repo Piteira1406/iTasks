@@ -1,20 +1,18 @@
-// features/kanban/screens/task_details_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// Importe os seus widgets
-import 'package:itasks/core/widgets/custom_button.dart';
-import 'package:itasks/core/widgets/custom_text_field.dart';
+import 'package:provider/provider.dart';
+import 'package:itasks/core/models/task_model.dart';
+import 'package:itasks/features/kanban/providers/task_details_provider.dart'; // O ficheiro que editámos acima
+import 'package:itasks/core/providers/auth_provider.dart';
+import 'package:itasks/core/widgets/glass_card.dart'; // O teu widget de vidro
 import 'package:itasks/features/kanban/providers/task_provider.dart';
 import 'package:itasks/core/providers/auth_provider.dart';
 import 'package:itasks/features/management/task_type_management/providers/task_type_provider.dart';
 import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
-  final dynamic
-  task; // Tarefa (mockada) para editar/ver. Se for 'null', é para criar.
-  final bool
-  isReadOnly; // Se 'true', bloqueia todos os campos (modo Programador)
+  final Task? task; // Se null = Criar Nova
+  final bool isReadOnly;
 
   const TaskDetailsScreen({super.key, this.task, required this.isReadOnly});
 
@@ -59,28 +57,29 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    
-    // Fetch required data from providers using WidgetsBinding.addPostFrameCallback
+    _descController = TextEditingController();
+    _pointsController = TextEditingController();
+
+    // Carregar dados assim que o ecrã abre
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final taskTypeProvider = context.read<TaskTypeProvider>();
-      final userManagementProvider = context.read<UserManagementProvider>();
-      
-      // Load task types and developers for dropdowns
-      taskTypeProvider.fetchTaskTypes();
-      userManagementProvider.fetchDevelopers();
+      final provider = Provider.of<TaskDetailsProvider>(context, listen: false);
+
+      // 1. Carregar listas (devs e tipos)
+      provider.loadDropdownData();
+
+      // 2. Se for edição, preencher campos
+      if (widget.task != null) {
+        provider.setTaskData(widget.task!);
+        _descController.text = widget.task!.description;
+        _pointsController.text = widget.task!.storyPoints.toString();
+      } else {
+        provider.clearForm(); // Limpar se for nova
+      }
     });
-    
-    if (!_isCreating) {
-      // Se estamos a editar/ver, preenchemos os campos
-      _titleController.text = widget.task['title'];
-      _orderController.text = widget.task['order'].toString();
-      // TODO: Preencher o resto (desc, datas, dropdowns)
-    }
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
     _descController.dispose();
     _orderController.dispose();
     _storyPointsController.dispose();
@@ -91,9 +90,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     if (_formKey.currentState!.validate()) {
       final taskProvider = context.read<TaskDetailsProvider>();
       final authProvider = context.read<AuthProvider>();
-      
+
       final managerId = authProvider.managerProfile?.id ?? 0;
-      
+
       if (managerId == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -103,7 +102,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         );
         return;
       }
-      
+
       // Call saveTask with error callback
       final success = await taskProvider.saveTask(
         managerId,
@@ -118,7 +117,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           return null;
         },
       );
-      
+
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -156,130 +155,157 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    String title = _isCreating
-        ? 'Nova Tarefa'
-        : (widget.isReadOnly ? 'Detalhes da Tarefa' : 'Editar Tarefa');
+    final provider = context.watch<TaskDetailsProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final isEditing = widget.task != null;
 
     return Scaffold(
-      appBar: AppBar(title: Text(title), backgroundColor: Colors.transparent),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // --- Campos Editáveis pelo Gestor ---
-              CustomTextField(
-                controller: _titleController,
-                hintText: 'Título da Tarefa',
-                icon: Icons.title,
-                readOnly: widget.isReadOnly,
-                validator: (val) => val!.isEmpty ? 'Campo obrigatório' : null,
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                controller: _descController,
-                hintText: 'Descrição',
-                icon: Icons.description,
-                readOnly: widget.isReadOnly,
-                maxLines: 4,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Descrição é obrigatória';
-                  }
-                  if (value.trim().length < 10) {
-                    return 'Descrição deve ter pelo menos 10 caracteres';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              // Dropdown Tipo de Tarefa
-              _buildTaskTypeDropdown(),
-              const SizedBox(height: 16),
-              // Dropdown Programador
-              _buildDeveloperDropdown(),
-              const SizedBox(height: 16),
-              CustomTextField(
-                controller: _orderController,
-                hintText: 'Ordem de Execução',
-                icon: Icons.priority_high,
-                readOnly: widget.isReadOnly,
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Ordem é obrigatória';
-                  }
-                  final order = int.tryParse(value);
-                  if (order == null || order <= 0) {
-                    return 'Ordem deve ser um número maior que 0';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                controller: _storyPointsController,
-                hintText: 'Story Points (estimativa de complexidade)',
-                icon: Icons.stars,
-                readOnly: widget.isReadOnly,
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Story Points é obrigatório';
-                  }
-                  final points = int.tryParse(value);
-                  if (points == null || points <= 0) {
-                    return 'Story Points deve ser maior que 0';
-                  }
-                  if (points > 100) {
-                    return 'Story Points deve ser no máximo 100';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
+      extendBodyBehindAppBar: true, // Importante para o fundo passar por trás
+      appBar: AppBar(
+        title: Text(isEditing ? 'Editar Tarefa' : 'Nova Tarefa'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          if (!widget.isReadOnly)
+            IconButton(
+              icon: provider.isLoading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Icon(Icons.save),
+              onPressed: () async {
+                if (_formKey.currentState!.validate()) {
+                  final success = await provider.saveTask(
+                    authProvider.appUser?.id.toString() ?? 'unknown_manager',
+                    existingTaskId: widget.task?.id,
+                  );
 
-              // --- Datas Previstas ---
-              Text(
-                'Datas Previstas',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              _buildDatePicker(
-                'Data Início Prevista',
-                _startDate,
-                (ctx) => _selectDate(ctx, true),
-              ),
-              _buildDatePicker(
-                'Data Fim Prevista',
-                _endDate,
-                (ctx) => _selectDate(ctx, false),
-              ),
-
-              const SizedBox(height: 24),
-
-              // --- Datas Reais (Apenas Leitura) ---
-              if (!_isCreating) ...[
-                Text(
-                  'Datas Reais (Automático)',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                _buildReadOnlyField(
-                  'Início Real:',
-                  '2025-10-22',
-                ), // TODO: vir do 'task'
-                _buildReadOnlyField(
-                  'Fim Real:',
-                  'Ainda não concluído',
-                ), // TODO: vir do 'task'
-                const SizedBox(height: 24),
-              ],
-
-              // Botão de Salvar (só aparece se não for ReadOnly)
-              if (!widget.isReadOnly)
-                CustomButton(text: 'Salvar Tarefa', onPressed: _saveForm),
+                  if (success && mounted) {
+                    Navigator.pop(context); // Volta para o Kanban
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Erro ao salvar ou campos inválidos'),
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+        ],
+      ),
+      body: Container(
+        // Fundo gradiente igual ao do Kanban para consistência
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).scaffoldBackgroundColor,
+              Theme.of(context).primaryColor.withValues(alpha: 0.3),
             ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: GlassCard(
+              // <--- O TEU WIDGET GLASS AQUI
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // --- Título ---
+                      Text(
+                        isEditing ? "Detalhes da Tarefa" : "Criar Nova Tarefa",
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const Divider(color: Colors.white30),
+                      const SizedBox(height: 20),
+
+                      // --- Descrição ---
+                      TextFormField(
+                        controller: _descController,
+                        decoration: const InputDecoration(
+                          labelText: 'Descrição',
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.white10,
+                        ),
+                        maxLines: 3,
+                        enabled: !widget.isReadOnly,
+                        validator: (val) => val!.isEmpty ? 'Obrigatório' : null,
+                        onChanged: (val) => provider.setDescription(val),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // --- Story Points ---
+                      TextFormField(
+                        controller: _pointsController,
+                        decoration: const InputDecoration(
+                          labelText: 'Story Points',
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.white10,
+                        ),
+                        keyboardType: TextInputType.number,
+                        enabled: !widget.isReadOnly,
+                        onChanged: (val) =>
+                            provider.setStoryPoints(int.tryParse(val) ?? 0),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // --- Dropdown: Tipo de Tarefa ---
+                      DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Tipo de Tarefa',
+                          filled: true,
+                          fillColor: Colors.white10,
+                          border: OutlineInputBorder(),
+                        ),
+                        value: provider.selectedTaskTypeId,
+                        // Aqui assumimos que a lista tem Maps. Ajusta se usares Models.
+                        items: provider.taskTypesList.map((type) {
+                          return DropdownMenuItem<String>(
+                            value: type.id, // ou type.id se for Model
+                            child: Text(type.name), // ou type.name
+                          );
+                        }).toList(),
+                        onChanged: widget.isReadOnly
+                            ? null
+                            : (val) => provider.setTaskTypeId(val),
+                        validator: (val) =>
+                            val == null ? 'Selecione um tipo' : null,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // --- Dropdown: Programador ---
+                      DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Atribuir a Programador',
+                          filled: true,
+                          fillColor: Colors.white10,
+                          border: OutlineInputBorder(),
+                        ),
+                        value: provider.selectedDeveloperId,
+                        items: provider.developersList.map((dev) {
+                          return DropdownMenuItem<String>(
+                            value: dev.id.toString(),
+                            child: Text(dev.name),
+                          );
+                        }).toList(),
+                        onChanged: widget.isReadOnly
+                            ? null
+                            : (val) => provider.setDeveloperId(val),
+                        validator: (val) =>
+                            val == null ? 'Selecione um programador' : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -300,13 +326,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         enabled: !widget.isReadOnly,
       ),
       items: taskTypes.map((type) {
-        return DropdownMenuItem(
-          value: type.id,
-          child: Text(type.name),
-        );
+        return DropdownMenuItem(value: type.id, child: Text(type.name));
       }).toList(),
-      onChanged: widget.isReadOnly 
-          ? null 
+      onChanged: widget.isReadOnly
+          ? null
           : (val) {
               if (val != null) {
                 setState(() {
@@ -337,13 +360,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         enabled: !widget.isReadOnly,
       ),
       items: developers.map((dev) {
-        return DropdownMenuItem(
-          value: dev.id,
-          child: Text(dev.name),
-        );
+        return DropdownMenuItem(value: dev.id, child: Text(dev.name));
       }).toList(),
-      onChanged: widget.isReadOnly 
-          ? null 
+      onChanged: widget.isReadOnly
+          ? null
           : (val) {
               if (val != null) {
                 setState(() {

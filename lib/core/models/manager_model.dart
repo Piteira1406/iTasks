@@ -14,12 +14,7 @@ class Manager {
   });
 
   Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'department': department,
-      'idUser': idUser,
-    };
+    return {'id': id, 'name': name, 'department': department, 'idUser': idUser};
   }
 
   factory Manager.fromFirestore(DocumentSnapshot doc) {

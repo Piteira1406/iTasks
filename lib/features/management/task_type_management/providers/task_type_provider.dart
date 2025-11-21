@@ -1,6 +1,3 @@
-// features/management/task_type_management/providers/task_type_provider.dart
-
-import 'dart:async'; // <-- Importa o 'async' para o StreamSubscription
 import 'package:flutter/material.dart';
 import 'package:itasks/core/models/task_type_model.dart';
 import 'package:itasks/core/services/firestore_service.dart';
@@ -9,7 +6,6 @@ enum TaskTypeState { idle, loading, error }
 
 class TaskTypeProvider extends ChangeNotifier {
   final FirestoreService _firestoreService;
-  StreamSubscription? _taskTypeSubscription; // <-- Para "ouvir" o Stream
 
   TaskTypeProvider(this._firestoreService) {
     // Começa a "ouvir" os dados assim que o provider é criado
@@ -22,23 +18,23 @@ class TaskTypeProvider extends ChangeNotifier {
   String _errorMessage = '';
   String get errorMessage => _errorMessage;
 
-  List<TaskTypeModel> _taskTypes = [];
-  List<TaskTypeModel> get taskTypes => List.unmodifiable(_taskTypes);
+  List<TaskTypeModel> _taskTypesList = [];
+  List<TaskTypeModel> get taskTypes => _taskTypesList;
 
   // 1. Buscar dados (AGORA USA O STREAM)
-  void fetchTaskTypes() {
+  Future<void> fetchTaskTypes() async {
     _setState(TaskTypeState.loading);
 
-    _taskTypeSubscription?.cancel(); // Cancela qualquer 'listener' antigo
-    _taskTypeSubscription = _firestoreService.getTaskTypesStream().listen(
-      (data) {
-        _taskTypes = data; // Atualiza a lista com os dados do stream
-        _setState(TaskTypeState.idle);
-      },
-      onError: (e) {
-        _setError(e.toString());
-      },
-    );
+    try {
+      // 2. Em vez de .listen(), usamos 'await' para esperar pela resposta
+      // Nota: Não precisas da variável '_taskTypeSubscription' aqui
+      final data = await _firestoreService.getTaskTypes();
+
+      _taskTypesList = data; // Guarda os dados
+      _setState(TaskTypeState.idle); // Tira o loading
+    } catch (e) {
+      _setError(e.toString());
+    }
   }
 
   // 2. Adicionar/Atualizar dados
@@ -95,12 +91,5 @@ class TaskTypeProvider extends ChangeNotifier {
     _errorMessage = message;
     _state = TaskTypeState.error;
     notifyListeners();
-  }
-
-  // Limpa o 'listener' do stream quando o provider é destruído
-  @override
-  void dispose() {
-    _taskTypeSubscription?.cancel();
-    super.dispose();
   }
 }

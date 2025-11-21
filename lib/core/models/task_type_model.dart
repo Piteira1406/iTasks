@@ -1,5 +1,3 @@
-// lib/core/models/task_type_model.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TaskTypeModel {
@@ -10,24 +8,15 @@ class TaskTypeModel {
 
   // Converte um objeto TaskTypeModel num Map para o Firestore
   Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-    };
+    return {'id': id, 'name': name};
   }
 
   // Cria um TaskTypeModel a partir de um documento do Firestore
   factory TaskTypeModel.fromFirestore(DocumentSnapshot doc) {
     final map = doc.data() as Map<String, dynamic>;
-    return TaskTypeModel(
-      id: map['id'] ?? 0,
-      name: map['name'] ?? '',
-    );
+    return TaskTypeModel(id: map['id'] ?? 0, name: map['name'] ?? '');
   }
 
-  // --- MÉTODO 'copyWith' ADICIONADO ---
-  // (Corrige o erro 'copyWith isn't defined')
-  // Cria uma *cópia* do objeto, mas permite alterar alguns campos
   TaskTypeModel copyWith({int? id, String? name}) {
     return TaskTypeModel(id: id ?? this.id, name: name ?? this.name);
   }

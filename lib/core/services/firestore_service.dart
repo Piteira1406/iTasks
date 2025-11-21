@@ -18,7 +18,7 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // --- GERADOR DE IDs ---
-  
+
   Future<int> getNextUserId() async {
     return await _getNextId('userId');
   }
@@ -37,11 +37,11 @@ class FirestoreService {
 
   Future<int> _getNextId(String counterName) async {
     final counterRef = _db.collection(countersCollection).doc(counterName);
-    
+
     int nextId = 1;
     await _db.runTransaction((transaction) async {
       final snapshot = await transaction.get(counterRef);
-      
+
       if (!snapshot.exists) {
         transaction.set(counterRef, {'value': nextId});
       } else {
@@ -50,7 +50,7 @@ class FirestoreService {
         transaction.update(counterRef, {'value': nextId});
       }
     });
-    
+
     return nextId;
   }
 
@@ -61,11 +61,17 @@ class FirestoreService {
   }
 
   Future<void> createManager(Manager manager) async {
-    await _db.collection(managersCollection).doc(manager.id.toString()).set(manager.toMap());
+    await _db
+        .collection(managersCollection)
+        .doc(manager.id.toString())
+        .set(manager.toMap());
   }
 
   Future<void> createDeveloper(Developer developer) async {
-    await _db.collection(developersCollection).doc(developer.id.toString()).set(developer.toMap());
+    await _db
+        .collection(developersCollection)
+        .doc(developer.id.toString())
+        .set(developer.toMap());
   }
 
   Future<AppUser?> getUserById(String uid) async {
@@ -93,10 +99,10 @@ class FirestoreService {
     // Precisamos converter uid para int se for necessário
     final userDoc = await _db.collection(usersCollection).doc(uid).get();
     if (!userDoc.exists) return null;
-    
+
     final userData = userDoc.data() as Map<String, dynamic>;
     final int userId = userData['id'] ?? 0;
-    
+
     final query = await _db
         .collection(managersCollection)
         .where('idUser', isEqualTo: userId)
@@ -114,10 +120,10 @@ class FirestoreService {
     // mas comparar com o campo idUser que agora é int
     final userDoc = await _db.collection(usersCollection).doc(uid).get();
     if (!userDoc.exists) return null;
-    
+
     final userData = userDoc.data() as Map<String, dynamic>;
     final int userId = userData['id'] ?? 0;
-    
+
     final query = await _db
         .collection(developersCollection)
         .where('idUser', isEqualTo: userId)
@@ -128,6 +134,11 @@ class FirestoreService {
       return Developer.fromFirestore(query.docs.first);
     }
     return null;
+  }
+
+  Future<List<Manager>> getManagers() async {
+    final querySnapshot = await _db.collection(managersCollection).get();
+    return querySnapshot.docs.map((doc) => Manager.fromFirestore(doc)).toList();
   }
 
   // User CRUD operations completed - see updateUserComplete and deleteUserComplete methods
@@ -162,14 +173,14 @@ class FirestoreService {
         .collection(tasksCollection)
         .where('idDeveloper', isEqualTo: developerId)
         .where('order', isEqualTo: order);
-    
+
     final querySnapshot = await query.get();
-    
+
     // If editing, exclude the current task from check
     if (excludeTaskId != null) {
       return querySnapshot.docs.every((doc) => doc.id == excludeTaskId);
     }
-    
+
     return querySnapshot.docs.isEmpty;
   }
 
@@ -195,13 +206,13 @@ class FirestoreService {
       order: task.order,
       excludeTaskId: task.id,
     );
-    
+
     if (!canUpdate) {
       throw Exception(
-        'Já existe outra tarefa com ordem ${task.order} para este programador'
+        'Já existe outra tarefa com ordem ${task.order} para este programador',
       );
     }
-    
+
     await _db.collection(tasksCollection).doc(task.id).update(task.toMap());
   }
 
@@ -219,7 +230,8 @@ class FirestoreService {
     final querySnapshot = await _db
         .collection(tasksCollection)
         .where('idManager', isEqualTo: managerId)
-        .where('taskStatus', whereIn: ['ToDo', 'Doing']).get();
+        .where('taskStatus', whereIn: ['ToDo', 'Doing'])
+        .get();
 
     return querySnapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
   }
@@ -284,7 +296,10 @@ class FirestoreService {
   }
 
   Future<void> updateManager(Manager manager) async {
-    await _db.collection(managersCollection).doc(manager.id.toString()).update(manager.toMap());
+    await _db
+        .collection(managersCollection)
+        .doc(manager.id.toString())
+        .update(manager.toMap());
   }
 
   Future<void> deleteManager(String managerId) async {
@@ -292,7 +307,10 @@ class FirestoreService {
   }
 
   Future<void> updateDeveloper(Developer developer) async {
-    await _db.collection(developersCollection).doc(developer.id.toString()).update(developer.toMap());
+    await _db
+        .collection(developersCollection)
+        .doc(developer.id.toString().toString())
+        .update(developer.toMap());
   }
 
   Future<void> deleteDeveloper(String developerId) async {
@@ -308,7 +326,7 @@ class FirestoreService {
   }) async {
     // Update AppUser
     await updateUser(uid, appUser);
-    
+
     // Update specific profile
     if (appUser.type == 'Manager' && manager != null) {
       await updateManager(manager);
@@ -339,19 +357,18 @@ class FirestoreService {
           LoggerService.info('Deleted Developer profile: ${developer.id}');
         }
       }
-      
+
       // Step 2: Delete AppUser document
       await deleteUser(uid);
       LoggerService.info('Deleted AppUser: $uid');
-      
+
       // Step 3: Delete from Firebase Auth (if requested)
       // Note: This should be done by the calling code with admin privileges
       if (deleteFromAuth) {
         LoggerService.warning(
-          'Auth deletion requested for $uid - this should be handled by admin/manager'
+          'Auth deletion requested for $uid - this should be handled by admin/manager',
         );
       }
-      
     } catch (e) {
       LoggerService.error('Error in cascade delete for user $uid', e);
       rethrow;
@@ -365,13 +382,18 @@ class FirestoreService {
 
   Future<List<Developer>> getAllDevelopers() async {
     final querySnapshot = await _db.collection(developersCollection).get();
-    return querySnapshot.docs.map((doc) => Developer.fromFirestore(doc)).toList();
+    return querySnapshot.docs
+        .map((doc) => Developer.fromFirestore(doc))
+        .toList();
   }
 
   // --- TASK TYPES ---
 
   Future<void> createTaskType(TaskTypeModel taskType) async {
-    await _db.collection(taskTypesCollection).doc(taskType.id.toString()).set(taskType.toMap());
+    await _db
+        .collection(taskTypesCollection)
+        .doc(taskType.id.toString())
+        .set(taskType.toMap());
   }
 
   Stream<List<TaskTypeModel>> getTaskTypesStream() {
@@ -385,14 +407,17 @@ class FirestoreService {
 
   Future<List<TaskTypeModel>> getTaskTypes() async {
     final querySnapshot = await _db.collection(taskTypesCollection).get();
-    return querySnapshot.docs.map((doc) => TaskTypeModel.fromFirestore(doc)).toList();
+    return querySnapshot.docs
+        .map((doc) => TaskTypeModel.fromFirestore(doc))
+        .toList();
   }
 
-  Future<void> updateTaskType(TaskTypeModel taskType) async {
+  Future<void> updateTaskType(TaskType taskType) async {
+    // Usa o ID do modelo para saber qual documento atualizar
     await _db
-      .collection(taskTypesCollection)
-      .doc(taskType.id.toString())  // Adicione .toString()
-      .update(taskType.toMap());
+        .collection(taskTypesCollection)
+        .doc(taskType.id.toString()) // Adicione .toString()
+        .update(taskType.toMap());
   }
 
   Future<void> deleteTaskType(String taskTypeId) async {
