@@ -282,8 +282,7 @@ class UserManagementProvider with ChangeNotifier {
       await _firestoreService.deleteUserComplete(
         uid: uid,
         appUser: appUser,
-        deleteFromAuth:
-            false, // Don't delete from Auth - only managers can do this
+        deleteFromAuth: false, // Cannot delete from Auth without Admin SDK
       );
 
       LoggerService.info('Delete concluído com sucesso');

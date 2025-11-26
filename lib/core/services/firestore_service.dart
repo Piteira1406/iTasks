@@ -329,11 +329,42 @@ class FirestoreService {
     // Update AppUser
     await updateUser(uid, appUser);
 
-    // Update specific profile
+    // Update or create specific profile
     if (appUser.type == 'Manager' && manager != null) {
-      await updateManager(manager);
+      // Check if Manager exists
+      final existingManager = await getManagerByUserId(uid);
+      if (existingManager != null) {
+        // Update existing - preserve docId
+        final managerToUpdate = Manager(
+          id: manager.id,
+          name: manager.name,
+          department: manager.department,
+          idUser: manager.idUser,
+          docId: existingManager.docId,
+        );
+        await updateManager(managerToUpdate);
+      } else {
+        // Create new Manager
+        await _db.collection(managersCollection).doc(manager.id.toString()).set(manager.toMap());
+      }
     } else if (appUser.type == 'Developer' && developer != null) {
-      await updateDeveloper(developer);
+      // Check if Developer exists
+      final existingDeveloper = await getDeveloperByUserId(uid);
+      if (existingDeveloper != null) {
+        // Update existing - preserve docId
+        final developerToUpdate = Developer(
+          id: developer.id,
+          name: developer.name,
+          experienceLevel: developer.experienceLevel,
+          idUser: developer.idUser,
+          idManager: developer.idManager,
+          docId: existingDeveloper.docId,
+        );
+        await updateDeveloper(developerToUpdate);
+      } else {
+        // Create new Developer (for legacy users without profile)
+        await _db.collection(developersCollection).doc(developer.id.toString()).set(developer.toMap());
+      }
     }
   }
 
@@ -349,14 +380,34 @@ class FirestoreService {
       if (appUser.type == 'Manager') {
         final manager = await getManagerByUserId(uid);
         if (manager != null) {
-          await deleteManager(manager.id.toString());
-          LoggerService.info('Deleted Manager profile: ${manager.id}');
+          // Use docId if available, otherwise use id
+          final docId = manager.docId ?? manager.id.toString();
+          await deleteManager(docId);
+          LoggerService.info('Deleted Manager profile: $docId');
+        } else {
+          // Fallback: try to delete by appUser.id (for legacy/inconsistent data)
+          try {
+            await deleteManager(appUser.id.toString());
+            LoggerService.info('Deleted Manager profile (fallback): ${appUser.id}');
+          } catch (e) {
+            LoggerService.warning('Manager profile not found for deletion: ${appUser.id}');
+          }
         }
       } else if (appUser.type == 'Developer') {
         final developer = await getDeveloperByUserId(uid);
         if (developer != null) {
-          await deleteDeveloper(developer.id.toString());
-          LoggerService.info('Deleted Developer profile: ${developer.id}');
+          // Use docId if available, otherwise use id
+          final docId = developer.docId ?? developer.id.toString();
+          await deleteDeveloper(docId);
+          LoggerService.info('Deleted Developer profile: $docId');
+        } else {
+          // Fallback: try to delete by appUser.id (for legacy/inconsistent data)
+          try {
+            await deleteDeveloper(appUser.id.toString());
+            LoggerService.info('Deleted Developer profile (fallback): ${appUser.id}');
+          } catch (e) {
+            LoggerService.warning('Developer profile not found for deletion: ${appUser.id}');
+          }
         }
       }
 

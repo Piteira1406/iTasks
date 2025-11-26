@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart'; // Ficheiro gerado pelo 'flutterfire configure'
 
 // --- CORE ---
@@ -41,6 +42,11 @@ Future<void> main() async {
   // 2. Inicializar o Firebase (OBRIGATÓRIO)
   // Use 'currentPlatform' para garantir a compatibilidade entre iOS/Android/Web
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // 2.1. Desativar logs de debug do Firestore (opcional)
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+  );
 
   // 3. Instanciar os seus serviços (singletons)
   final AuthService authService = AuthService();
