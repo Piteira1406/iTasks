@@ -256,9 +256,11 @@ class _UserEditScreenState extends State<UserEditScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -334,9 +336,11 @@ class _UserEditScreenState extends State<UserEditScreen> {
 
                 const SizedBox(height: 32),
                 CustomButton(text: 'Salvar', onPressed: _saveForm),
+                const SizedBox(height: 24), // Extra bottom padding
               ],
             ],
           ),
+        ),
         ),
       ),
     );

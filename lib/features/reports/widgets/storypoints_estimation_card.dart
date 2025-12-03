@@ -85,17 +85,26 @@ class _StoryPointsEstimationCardState extends State<StoryPointsEstimationCard> {
       children: [
         Icon(icon, size: 20, color: Colors.grey),
         const SizedBox(width: 8),
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+        Flexible(
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
-        const Spacer(),
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal,
-            fontSize: isHighlight ? 16 : 14,
-            color: isHighlight ? Theme.of(context).colorScheme.primary : null,
+        const SizedBox(width: 8),
+        Flexible(
+          flex: 2,
+          child: Text(
+            value,
+            style: TextStyle(
+              fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal,
+              fontSize: isHighlight ? 16 : 14,
+              color: isHighlight ? Theme.of(context).colorScheme.primary : null,
+            ),
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
           ),
         ),
       ],

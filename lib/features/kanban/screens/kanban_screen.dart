@@ -1,15 +1,19 @@
-import 'dart:ui'; // Para o ImageFilter
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
-import 'package:drag_and_drop_lists/drag_and_drop_lists.dart'; // O pacote novo
+import 'package:drag_and_drop_lists/drag_and_drop_lists.dart';
 
 import 'package:itasks/core/models/task_model.dart';
 import 'package:itasks/features/kanban/providers/kanban_provider.dart';
 import 'package:itasks/features/kanban/widgets/kanban_card_widget.dart';
 import 'package:itasks/core/providers/auth_provider.dart';
 import 'package:itasks/features/kanban/screens/task_details_screen.dart';
-import 'package:itasks/core/providers/theme_provider.dart'; // <--- 1. ADICIONADO
+import 'package:itasks/core/providers/theme_provider.dart';
+import 'package:itasks/core/theme/app_colors.dart';
+import 'package:itasks/core/theme/app_typography.dart';
+import 'package:itasks/core/theme/app_dimensions.dart';
+import 'package:itasks/core/widgets/custom_button.dart';
 
 class KanbanScreen extends StatefulWidget {
   const KanbanScreen({super.key});
@@ -22,7 +26,6 @@ class _KanbanScreenState extends State<KanbanScreen> {
   @override
   void initState() {
     super.initState();
-    // Carrega as tarefas ao iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<KanbanProvider>(context, listen: false).fetchTasks();
     });
@@ -30,42 +33,93 @@ class _KanbanScreenState extends State<KanbanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      // CRÍTICO PARA O DRAWER GLASS: O corpo estende-se para trás da AppBar
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('iTasks Kanban'),
-        backgroundColor: Colors.transparent, // AppBar transparente
+        title: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: AppBorderRadius.radiusSM,
+                boxShadow: AppShadows.shadowPrimary,
+              ),
+              child: const Icon(
+                Icons.dashboard_customize_rounded,
+                size: 18,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: AppSpacing.md),
+            Text(
+              'Kanban Board',
+              style: AppTypography.h4.copyWith(
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.lightTextPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: (isDark ? AppColors.darkSurface : AppColors.lightSurface)
+            .withValues(alpha: 0.8),
         elevation: 0,
         actions: [
-          // Botão para CRIAR NOVA TAREFA (+)
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  // Passamos task: null para indicar que é uma NOVA tarefa
-                  builder: (context) =>
-                      const TaskDetailsScreen(task: null, isReadOnly: false),
+          Padding(
+            padding: EdgeInsets.only(right: AppSpacing.md),
+            child: IconButton(
+              icon: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: AppBorderRadius.radiusSM,
+                  boxShadow: AppShadows.shadowPrimary,
                 ),
-              );
-            },
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        const TaskDetailsScreen(task: null, isReadOnly: false),
+                    transitionDuration: const Duration(milliseconds: 400),
+                    reverseTransitionDuration: const Duration(milliseconds: 300),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      final scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
+                        CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                      );
+                      return ScaleTransition(
+                        scale: scaleAnimation,
+                        child: FadeTransition(
+                          opacity: animation,
+                          child: child,
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
-      drawer: _buildGlassDrawer(context), // <--- 2. O DRAWER ATUALIZADO
+      drawer: _buildGlassDrawer(context),
       body: Container(
-        // Fundo geral da app (gradiente ou cor sólida) para o vidro sobressair
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Theme.of(context).scaffoldBackgroundColor,
-              Theme.of(context).primaryColor.withValues(alpha: 0.3),
-            ],
-          ),
+          gradient: isDark
+              ? AppColors.backgroundGradientDark
+              : AppColors.backgroundGradientLight,
         ),
         child: SafeArea(child: _buildKanbanBody()),
       ),
@@ -94,53 +148,77 @@ class _KanbanScreenState extends State<KanbanScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final bool isReadOnly = (authProvider.appUser?.type == 'Programador');
 
-    return Column(
-      children: [
-        if (provider.errorMessage.isNotEmpty)
-          Container(
-            width: double.infinity,
-            color: Colors.red.withValues(alpha: 0.8),
-            padding: const EdgeInsets.all(10),
-            child: Text(
-              provider.errorMessage,
-              style: const TextStyle(color: Colors.white),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final isMobile = width < 640;
+        final isTablet = width >= 640 && width < 1024;
+
+        return Column(
+          children: [
+            if (provider.errorMessage.isNotEmpty)
+              Container(
+                width: double.infinity,
+                color: Colors.red.withValues(alpha: 0.8),
+                padding: const EdgeInsets.all(10),
+                child: Text(
+                  provider.errorMessage,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            Expanded(
+              child: isMobile
+                  ? _buildMobileColumnsLayout(context, provider, isReadOnly)
+                  : _buildDesktopColumnsLayout(context, provider, isReadOnly, isTablet),
             ),
-          ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMobileColumnsLayout(BuildContext context, KanbanProvider provider, bool isReadOnly) {
+    return PageView(
+      children: [
+        _buildWebColumn(context, "A Fazer", provider.todoTasks, 0, isReadOnly, provider),
+        _buildWebColumn(context, "Em Execução", provider.doingTasks, 1, isReadOnly, provider),
+        _buildWebColumn(context, "Concluído", provider.doneTasks, 2, isReadOnly, provider),
+      ],
+    );
+  }
+
+  Widget _buildDesktopColumnsLayout(BuildContext context, KanbanProvider provider, bool isReadOnly, bool isTablet) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _buildWebColumn(
-                  context,
-                  "A Fazer",
-                  provider.todoTasks,
-                  0,
-                  isReadOnly,
-                  provider,
-                ),
-              ),
-              Expanded(
-                child: _buildWebColumn(
-                  context,
-                  "Em Execução",
-                  provider.doingTasks,
-                  1,
-                  isReadOnly,
-                  provider,
-                ),
-              ),
-              Expanded(
-                child: _buildWebColumn(
-                  context,
-                  "Concluído",
-                  provider.doneTasks,
-                  2,
-                  isReadOnly,
-                  provider,
-                ),
-              ),
-            ],
+          child: _buildWebColumn(
+            context,
+            "A Fazer",
+            provider.todoTasks,
+            0,
+            isReadOnly,
+            provider,
+          ),
+        ),
+        Expanded(
+          child: _buildWebColumn(
+            context,
+            "Em Execução",
+            provider.doingTasks,
+            1,
+            isReadOnly,
+            provider,
+          ),
+        ),
+        Expanded(
+          child: _buildWebColumn(
+            context,
+            "Concluído",
+            provider.doneTasks,
+            2,
+            isReadOnly,
+            provider,
           ),
         ),
       ],
@@ -155,14 +233,42 @@ class _KanbanScreenState extends State<KanbanScreen> {
     bool isReadOnly,
     KanbanProvider provider,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    Color getColumnColor() {
+      switch (columnIndex) {
+        case 0:
+          return AppColors.todoColor;
+        case 1:
+          return AppColors.doingColor;
+        case 2:
+          return AppColors.doneColor;
+        default:
+          return AppColors.primary;
+      }
+    }
+
+    IconData getColumnIcon() {
+      switch (columnIndex) {
+        case 0:
+          return Icons.list_alt_rounded;
+        case 1:
+          return Icons.autorenew_rounded;
+        case 2:
+          return Icons.check_circle_rounded;
+        default:
+          return Icons.list_alt_rounded;
+      }
+    }
+
+    final columnColor = getColumnColor();
+
     return DragTarget<Map<String, dynamic>>(
       onWillAcceptWithDetails: (details) => !isReadOnly,
       onAcceptWithDetails: (details) {
         final data = details.data;
         final oldColumnIndex = data['columnIndex'] as int;
         final oldItemIndex = data['itemIndex'] as int;
-        
-        // Calcular novo índice (adicionar no final da lista)
         final newItemIndex = tasks.length;
         
         provider.handleTaskMove(
@@ -176,56 +282,102 @@ class _KanbanScreenState extends State<KanbanScreen> {
         final bool isOver = candidateData.isNotEmpty;
         
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          margin: EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           decoration: BoxDecoration(
-            color: isOver
-                ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(15),
+            gradient: isOver
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      columnColor.withValues(alpha: 0.15),
+                      columnColor.withValues(alpha: 0.05),
+                    ],
+                  )
+                : null,
+            borderRadius: AppBorderRadius.radiusLG,
             border: Border.all(
               color: isOver
-                  ? Theme.of(context).primaryColor
-                  : Colors.transparent,
-              width: 2,
+                  ? columnColor
+                  : (isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.lightTextSecondary)
+                      .withValues(alpha: 0.1),
+              width: isOver ? 2 : 1,
             ),
           ),
           child: Column(
             children: [
-              // Header
+              // Modern Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                margin: const EdgeInsets.only(bottom: 8),
+                padding: EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      columnColor.withValues(alpha: 0.2),
+                      columnColor.withValues(alpha: 0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    topLeft: AppBorderRadius.radiusLG.topLeft,
+                    topRight: AppBorderRadius.radiusLG.topRight,
+                  ),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: columnColor.withValues(alpha: 0.3),
+                      width: 2,
                     ),
-                  ],
+                  ),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      title,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: columnColor.withValues(alpha: 0.2),
+                        borderRadius: AppBorderRadius.radiusSM,
+                      ),
+                      child: Icon(
+                        getColumnIcon(),
+                        size: 20,
+                        color: columnColor,
+                      ),
+                    ),
+                    SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: AppTypography.h5.copyWith(
+                          color: isDark
+                              ? AppColors.darkTextPrimary
+                              : AppColors.lightTextPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.xs,
+                      ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
+                        color: columnColor.withValues(alpha: 0.2),
+                        borderRadius: AppBorderRadius.radiusFull,
+                        border: Border.all(
+                          color: columnColor.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Text(
                         '${tasks.length}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: AppTypography.labelMedium.copyWith(
+                          color: columnColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -233,57 +385,84 @@ class _KanbanScreenState extends State<KanbanScreen> {
               ),
               // Tasks
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(8),
-                  itemCount: tasks.length,
-                  itemBuilder: (context, index) {
-                    final task = tasks[index];
-                    final canDrag = task.taskStatus != 'Done' && !isReadOnly;
-                    
-                    if (canDrag) {
-                      return Draggable<Map<String, dynamic>>(
-                        data: {
-                          'task': task,
-                          'columnIndex': columnIndex,
-                          'itemIndex': index,
-                        },
-                        feedback: Material(
-                          elevation: 8,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            width: 300,
-                            child: Opacity(
-                              opacity: 0.8,
+                child: tasks.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.inbox_rounded,
+                              size: 48,
+                              color: (isDark
+                                      ? AppColors.darkTextSecondary
+                                      : AppColors.lightTextSecondary)
+                                  .withValues(alpha: 0.3),
+                            ),
+                            SizedBox(height: AppSpacing.md),
+                            Text(
+                              'Sem tarefas',
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.lightTextSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: EdgeInsets.all(AppSpacing.sm),
+                        itemCount: tasks.length,
+                        itemBuilder: (context, index) {
+                          final task = tasks[index];
+                          final canDrag =
+                              task.taskStatus != 'Done' && !isReadOnly;
+                          
+                          if (canDrag) {
+                            return Draggable<Map<String, dynamic>>(
+                              data: {
+                                'task': task,
+                                'columnIndex': columnIndex,
+                                'itemIndex': index,
+                              },
+                              feedback: Material(
+                                elevation: 8,
+                                color: Colors.transparent,
+                                borderRadius: AppBorderRadius.radiusMD,
+                                child: Container(
+                                  width: 300,
+                                  child: Opacity(
+                                    opacity: 0.9,
+                                    child: KanbanCardWidget(
+                                      task: task,
+                                      isReadOnly: isReadOnly,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              childWhenDragging: Opacity(
+                                opacity: 0.3,
+                                child: KanbanCardWidget(
+                                  key: ValueKey(task.id),
+                                  task: task,
+                                  isReadOnly: isReadOnly,
+                                ),
+                              ),
                               child: KanbanCardWidget(
+                                key: ValueKey(task.id),
                                 task: task,
                                 isReadOnly: isReadOnly,
                               ),
-                            ),
-                          ),
-                        ),
-                        childWhenDragging: Opacity(
-                          opacity: 0.3,
-                          child: KanbanCardWidget(
-                            key: ValueKey(task.id),
-                            task: task,
-                            isReadOnly: isReadOnly,
-                          ),
-                        ),
-                        child: KanbanCardWidget(
-                          key: ValueKey(task.id),
-                          task: task,
-                          isReadOnly: isReadOnly,
-                        ),
-                      );
-                    } else {
-                      return KanbanCardWidget(
-                        key: ValueKey(task.id),
-                        task: task,
-                        isReadOnly: isReadOnly,
-                      );
-                    }
-                  },
-                ),
+                            );
+                          } else {
+                            return KanbanCardWidget(
+                              key: ValueKey(task.id),
+                              task: task,
+                              isReadOnly: isReadOnly,
+                            );
+                          }
+                        },
+                      ),
               ),
             ],
           ),
@@ -401,15 +580,17 @@ class _KanbanScreenState extends State<KanbanScreen> {
     );
   }
 
-  /// 3. DRAWER ATUALIZADO (COM TEMA E NAVEGAÇÃO)
+  /// Modern Navigation Drawer
   Widget _buildGlassDrawer(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    // Agora usamos o ThemeProvider real para controlar o switch
     final themeProvider = context.watch<ThemeProvider>();
+    final isDark = themeProvider.isDarkMode;
+    final user = authProvider.appUser;
+    final isManager = user?.type == 'Manager';
 
     return Drawer(
       width: 300,
-      backgroundColor: Colors.transparent, // Fundo transparente para o blur
+      backgroundColor: Colors.transparent,
       elevation: 0,
       child: ClipRRect(
         borderRadius: const BorderRadius.only(
@@ -417,123 +598,354 @@ class _KanbanScreenState extends State<KanbanScreen> {
           bottomRight: Radius.circular(20),
         ),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0), // Blur forte
+          filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
           child: Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor.withValues(
-                alpha: 0.8,
-              ), // Cor base semi-transparente
+              color: (isDark ? AppColors.darkSurface : AppColors.lightSurface)
+                  .withValues(alpha: 0.9),
               border: Border(
-                right: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                right: BorderSide(
+                  color: (isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.lightTextSecondary)
+                      .withValues(alpha: 0.1),
+                  width: 1,
+                ),
               ),
             ),
-            child: ListView(
-              padding: EdgeInsets.zero,
+            child: Column(
               children: [
-                // --- CABEÇALHO ---
-                DrawerHeader(
+                // Modern Gradient Header
+                Container(
+                  padding: EdgeInsets.all(AppSpacing.xl2),
                   decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).primaryColor.withValues(alpha: 0.4),
+                    gradient: isManager
+                        ? AppColors.accentGradient
+                        : AppColors.primaryGradient,
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isManager
+                                ? AppColors.accent
+                                : AppColors.primary)
+                            .withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Avatar with gradient border
+                        Container(
+                          padding: EdgeInsets.all(AppSpacing.xs),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: AppBorderRadius.radiusFull,
+                          ),
+                          child: CircleAvatar(
+                            radius: 32,
+                            backgroundColor: Colors.white,
+                            child: Text(
+                              user?.name.substring(0, 1).toUpperCase() ?? 'U',
+                              style: AppTypography.h3.copyWith(
+                                color: isManager
+                                    ? AppColors.accent
+                                    : AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: AppSpacing.lg),
+                        
+                        // User Info
+                        Text(
+                          user?.name ?? "Utilizador",
+                          style: AppTypography.h5.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: AppSpacing.xs),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: AppBorderRadius.radiusFull,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isManager
+                                    ? Icons.admin_panel_settings_rounded
+                                    : Icons.code_rounded,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                              SizedBox(width: AppSpacing.xs),
+                              Text(
+                                user?.type ?? "Convidado",
+                                style: AppTypography.caption.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Navigation Items
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                     children: [
-                      const CircleAvatar(
-                        radius: 30,
-                        child: Icon(Icons.person, size: 35),
+                      // Theme Toggle
+                      _buildModernTile(
+                        context: context,
+                        icon: isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                        title: 'Tema',
+                        subtitle: isDark ? 'Modo Escuro' : 'Modo Claro',
+                        trailing: Switch(
+                          value: isDark,
+                          activeThumbColor: AppColors.primary,
+                          onChanged: (val) => themeProvider.toggleTheme(val),
+                        ),
+                        isDark: isDark,
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        authProvider.appUser?.name ?? "Utilizador",
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          // Forçamos branco para contraste no header colorido
-                          color: Colors.white,
+                      
+                      SizedBox(height: AppSpacing.sm),
+                      
+                      // Manager Menu
+                      if (isManager) ...[
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.sm,
+                          ),
+                          child: Text(
+                            'GESTÃO',
+                            style: AppTypography.caption.copyWith(
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                        _buildModernNavTile(
+                          context: context,
+                          icon: Icons.category_rounded,
+                          title: 'Tipos de Tarefa',
+                          route: '/task_types',
+                          color: const Color(0xFFFF6B6B),
+                          isDark: isDark,
+                        ),
+                        _buildModernNavTile(
+                          context: context,
+                          icon: Icons.people_rounded,
+                          title: 'Utilizadores',
+                          route: '/user_management',
+                          color: const Color(0xFF4ECDC4),
+                          isDark: isDark,
+                        ),
+                        _buildModernNavTile(
+                          context: context,
+                          icon: Icons.analytics_rounded,
+                          title: 'Relatórios',
+                          route: '/reports',
+                          color: AppColors.accent,
+                          isDark: isDark,
+                        ),
+                        SizedBox(height: AppSpacing.sm),
+                      ],
+                      
+                      // Kanban Link
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.sm,
+                        ),
+                        child: Text(
+                          'NAVEGAÇÃO',
+                          style: AppTypography.caption.copyWith(
+                            color: isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.lightTextSecondary,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
                         ),
                       ),
-                      Text(
-                        authProvider.appUser?.type ?? "Convidado",
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.8),
-                        ),
+                      _buildModernNavTile(
+                        context: context,
+                        icon: Icons.dashboard_customize_rounded,
+                        title: 'Kanban Board',
+                        route: '/kanban',
+                        color: AppColors.primary,
+                        isDark: isDark,
+                        isActive: true,
                       ),
                     ],
                   ),
                 ),
 
-                // --- TOGGLE DO TEMA ---
-                ListTile(
-                  leading: Icon(
-                    themeProvider.isDarkMode
-                        ? Icons.dark_mode
-                        : Icons.light_mode,
+                // Logout Button
+                Container(
+                  padding: EdgeInsets.all(AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                        color: (isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.lightTextSecondary)
+                            .withValues(alpha: 0.1),
+                      ),
+                    ),
                   ),
-                  title: const Text('Modo Escuro/Claro'),
-                  trailing: Switch(
-                    // Liga o valor ao estado real do provider
-                    value: themeProvider.isDarkMode,
-                    activeColor: Theme.of(context).primaryColor,
-                    onChanged: (val) {
-                      // Chama a função de toggle
-                      themeProvider.toggleTheme(val);
-                    },
-                  ),
-                ),
-                const Divider(),
-
-                // --- NAVEGAÇÃO (Só Manager) ---
-                if (authProvider.appUser?.type == 'Manager') ...[
-                  ListTile(
-                    leading: const Icon(Icons.category),
-                    title: const Text('Tipos de Tarefa'),
-                    onTap: () {
-                      Navigator.pop(context); // Fecha drawer
-                      // Certifica-te que a rota '/task_types' existe no main.dart
-                      Navigator.pushNamed(context, '/task_types');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.people),
-                    title: const Text('Utilizadores'),
-                    onTap: () {
+                  child: CustomButton(
+                    text: 'Sair',
+                    onPressed: () {
                       Navigator.pop(context);
-                      // Certifica-te que a rota '/users' existe no main.dart
-                      Navigator.pushNamed(context, '/user_management');
+                      authProvider.signOut();
                     },
+                    variant: ButtonVariant.danger,
+                    size: ButtonSize.medium,
+                    isFullWidth: true,
+                    icon: Icons.logout_rounded,
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.report),
-                    title: const Text('Relatórios'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      // Certifica-te que a rota '/reports' existe no main.dart
-                      Navigator.pushNamed(context, '/reports');
-                    },
-                  ),
-                ],
-                const Divider(),
-
-                // --- LOGOUT ---
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title: const Text(
-                    'Sair',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    authProvider.signOut();
-                    // O AuthWrapper trata do resto
-                  },
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildModernTile({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    required bool isDark,
+  }) {
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: (isDark ? AppColors.darkSurface : AppColors.lightSurface)
+            .withValues(alpha: 0.5),
+        borderRadius: AppBorderRadius.radiusMD,
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            borderRadius: AppBorderRadius.radiusSM,
+          ),
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
+        title: Text(
+          title,
+          style: AppTypography.bodyMedium.copyWith(
+            color: isDark
+                ? AppColors.darkTextPrimary
+                : AppColors.lightTextPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: subtitle != null
+            ? Text(
+                subtitle,
+                style: AppTypography.caption.copyWith(
+                  color: isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.lightTextSecondary,
+                ),
+              )
+            : null,
+        trailing: trailing,
+      ),
+    );
+  }
+
+  Widget _buildModernNavTile({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String route,
+    required Color color,
+    required bool isDark,
+    bool isActive = false,
+  }) {
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        gradient: isActive
+            ? LinearGradient(
+                colors: [
+                  color.withValues(alpha: 0.2),
+                  color.withValues(alpha: 0.1),
+                ],
+              )
+            : null,
+        borderRadius: AppBorderRadius.radiusMD,
+        border: isActive
+            ? Border.all(color: color.withValues(alpha: 0.3))
+            : null,
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: isActive ? 0.2 : 0.1),
+            borderRadius: AppBorderRadius.radiusSM,
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        title: Text(
+          title,
+          style: AppTypography.bodyMedium.copyWith(
+            color: isActive
+                ? color
+                : isDark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.lightTextPrimary,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+          ),
+        ),
+        trailing: isActive
+            ? Icon(Icons.chevron_right_rounded, color: color, size: 20)
+            : null,
+        onTap: () {
+          Navigator.pop(context);
+          if (!isActive) {
+            Navigator.pushNamed(context, route);
+          }
+        },
       ),
     );
   }
