@@ -4,6 +4,7 @@
 // This widget may be repurposed for admin-only user creation UI.
 
 import 'package:flutter/material.dart';
+import 'package:itasks/core/widgets/custom_snackbar.dart';
 
 /// This form should ONLY be used by Managers in the admin dashboard
 /// DO NOT expose this to unauthenticated users
@@ -94,10 +95,9 @@ class _RegisterFormState extends State<RegisterForm> {
             onPressed: () {
               if (_formKey.currentState!.validate()) {
                 // TODO: Implement registration logic
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Registration not implemented yet'),
-                  ),
+                CustomSnackBar.showInfo(
+                  context,
+                  'Registration not implemented yet',
                 );
               }
             },

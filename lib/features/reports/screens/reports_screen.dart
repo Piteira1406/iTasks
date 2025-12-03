@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:itasks/core/widgets/custom_snackbar.dart';
 import 'package:itasks/features/reports/providers/report_provider.dart';
 import 'package:itasks/features/reports/widgets/report_filters.dart';
 import 'package:itasks/features/reports/widgets/statistics_cards.dart';
@@ -72,11 +73,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ? null
                 : () {
                     reportProvider.clearFilters();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Filtros limpos'),
-                        duration: Duration(seconds: 2),
-                      ),
+                    CustomSnackBar.showInfo(
+                      context,
+                      'Filtros limpos',
+                      duration: const Duration(seconds: 2),
                     );
                   },
             tooltip: 'Limpar Filtros',
@@ -343,26 +343,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       if (filePath != null) {
         // Sucesso - a mensagem já foi definida no provider
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('✅ Tarefas exportadas com sucesso!'),
-            backgroundColor: Colors.green,
-            action: SnackBarAction(
-              label: 'OK',
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
-            duration: const Duration(seconds: 3),
-          ),
+        CustomSnackBar.showSuccess(
+          context,
+          '✅ Tarefas exportadas com sucesso!',
         );
       } else {
         // Erro - a mensagem já foi definida no provider
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Erro ao exportar tarefas'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
-          ),
+        CustomSnackBar.showError(
+          context,
+          '❌ Erro ao exportar tarefas',
         );
       }
     }
@@ -399,25 +388,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
       Navigator.of(context).pop(); // Fechar loading
 
       if (filePath != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('✅ Estatísticas exportadas com sucesso!'),
-            backgroundColor: Colors.green,
-            action: SnackBarAction(
-              label: 'OK',
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
-            duration: const Duration(seconds: 3),
-          ),
+        CustomSnackBar.showSuccess(
+          context,
+          '✅ Estatísticas exportadas com sucesso!',
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Erro ao exportar estatísticas'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
-          ),
+        CustomSnackBar.showError(
+          context,
+          '❌ Erro ao exportar estatísticas',
         );
       }
     }

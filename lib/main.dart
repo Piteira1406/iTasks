@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'firebase_options.dart'; // Ficheiro gerado pelo 'flutterfire configure'
+import 'firebase_options.dart';
 
 // --- CORE ---
 // Serviços
@@ -30,8 +30,6 @@ import 'features/kanban/screens/task_details_screen.dart';
 import 'features/reports/screens/reports_screen.dart';
 import 'features/management/user_management/screens/user_list_screen.dart';
 import 'features/management/task_type_management/screens/task_type_screen.dart';
-
-// Importar o Modelo de Tarefa é necessário para a rota /task_details
 import 'core/models/task_model.dart';
 
 // Ponto de entrada da aplicação
@@ -40,7 +38,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 2. Inicializar o Firebase (OBRIGATÓRIO)
-  // Use 'currentPlatform' para garantir a compatibilidade entre iOS/Android/Web
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // 2.1. Desativar logs de debug do Firestore (opcional)
@@ -101,7 +98,6 @@ class ITasksApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ouve o ThemeProvider para reagir a mudanças de tema (Claro/Escuro)
     final themeProvider = context.watch<ThemeProvider>();
 
     return MaterialApp(
@@ -122,8 +118,6 @@ class ITasksApp extends StatelessWidget {
         '/reports': (context) => const ReportsScreen(),
         '/task_types': (context) => const TaskTypeScreen(),
         '/user_management': (context) => const UserListScreen(),
-
-        // CORREÇÃO CRÍTICA: Rota que recebe argumentos (Task ou isReadOnly)
         '/task_details': (context) {
           final arguments =
               ModalRoute.of(context)?.settings.arguments

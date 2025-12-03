@@ -216,6 +216,10 @@ class FirestoreService {
     await _db.collection(tasksCollection).doc(task.id).update(task.toMap());
   }
 
+  Future<void> deleteTask(String taskId) async {
+    await _db.collection(tasksCollection).doc(taskId).delete();
+  }
+
   Future<List<Task>> getCompletedTasksForManager(int managerId) async {
     final querySnapshot = await _db
         .collection(tasksCollection)

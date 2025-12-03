@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 // Imports do projeto
 import 'package:itasks/core/widgets/glass_card.dart';
+import 'package:itasks/core/widgets/custom_snackbar.dart';
 import 'package:itasks/features/management/user_management/screens/user_edit_screen.dart';
 import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
 import 'package:itasks/core/models/app_user_model.dart';
@@ -179,20 +180,13 @@ class _UserListScreenState extends State<UserListScreen> {
         if (error == null) {
           // Sucesso
           await provider.fetchUsers();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Utilizador "${user.name}" eliminado com sucesso'),
-              backgroundColor: Colors.green,
-            ),
+          CustomSnackBar.showSuccess(
+            context,
+            'Utilizador "${user.name}" eliminado com sucesso',
           );
         } else {
           // Erro
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+          CustomSnackBar.showError(context, error);
         }
       }
     }

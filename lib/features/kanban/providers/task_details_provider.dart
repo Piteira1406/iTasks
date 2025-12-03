@@ -181,4 +181,22 @@ class TaskDetailsProvider with ChangeNotifier {
       return false;
     }
   }
+
+  /// Delete existing task
+  Future<bool> deleteTask(String taskId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _firestoreService.deleteTask(taskId);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      LoggerService.error('Error deleting task', e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }

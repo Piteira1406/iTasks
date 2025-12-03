@@ -81,6 +81,25 @@ The application implements comprehensive Firestore Security Rules:
 - ✅ User creation is done through the User Management Dashboard
 - ✅ Managers use `UserManagementProvider.createNewUser()` to register users
 
+### Password Management
+
+**Limitação do Firebase**: Não é possível alterar a password de outros utilizadores diretamente na aplicação.
+
+#### Como Alterar Password de um Utilizador
+
+1. **Utilizador faz logout** da aplicação
+2. No ecrã de login, clica em **"Esqueci a password"**
+3. Introduz o email da conta
+4. **Firebase envia email** com link seguro de recuperação
+5. Utilizador clica no link e **define nova password**
+6. Faz login com a nova password
+
+**Porquê esta limitação?**
+- Firebase Authentication não permite que clientes alterem passwords de outros utilizadores
+- Esta funcionalidade requer Admin SDK em Cloud Functions
+- Cloud Functions necessitam do plano Blaze (pay-as-you-go)
+- O projeto está no plano Spark (gratuito)
+
 ## 📦 Dependencies
 
 ### Core Dependencies

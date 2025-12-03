@@ -204,6 +204,9 @@ class UserManagementProvider with ChangeNotifier {
         }
       }
 
+      // Note: Password updates are not supported due to Firebase limitations
+      // Cloud Functions with Admin SDK would be required (Blaze plan)
+
       // Update user and profile
       await _firestoreService.updateUserComplete(
         uid: uid,

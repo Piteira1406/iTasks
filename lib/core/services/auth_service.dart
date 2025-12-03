@@ -37,5 +37,24 @@ class AuthService {
     }
   }
 
+  /// Send password reset email
+  Future<String?> sendPasswordResetEmail({required String email}) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      return null; // Success
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          return 'Não existe nenhuma conta com este email.';
+        case 'invalid-email':
+          return 'Email inválido.';
+        default:
+          return 'Erro ao enviar email: ${e.message}';
+      }
+    } catch (e) {
+      return 'Erro ao enviar email: ${e.toString()}';
+    }
+  }
+
 
 }

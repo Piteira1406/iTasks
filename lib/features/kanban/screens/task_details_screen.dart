@@ -4,6 +4,7 @@ import 'package:itasks/core/models/task_model.dart';
 import 'package:itasks/features/kanban/providers/task_details_provider.dart'; // O provider principal
 import 'package:itasks/core/providers/auth_provider.dart'; // Para autenticação e IDs do Manager
 import 'package:itasks/core/widgets/glass_card.dart'; // O teu widget de vidro
+import 'package:itasks/core/widgets/custom_snackbar.dart';
 // Assumindo que AppUser e TaskType Models estão disponíveis para o Dropdown
 import 'package:itasks/core/models/app_user_model.dart';
 import 'package:itasks/core/models/task_type_model.dart';
@@ -83,13 +84,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
       if (managerId == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Erro: Gestor não identificado. Faça login novamente.',
-              ),
-              backgroundColor: Colors.red,
-            ),
+          CustomSnackBar.showError(
+            context,
+            'Erro: Gestor não identificado. Faça login novamente.',
           );
         }
         return;
@@ -105,26 +102,57 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         );
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erro ao salvar: ${e.toString()}'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-            ),
-          );
+          CustomSnackBar.showError(context, 'Erro ao salvar: ${e.toString()}');
         }
         return;
       }
 
       if (success && mounted) {
         final actionText = _isCreating ? 'criada' : 'atualizada';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Tarefa $actionText com sucesso!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        CustomSnackBar.showSuccess(context, 'Tarefa $actionText com sucesso!');
         Navigator.of(context).pop();
+      }
+    }
+  }
+
+  // Função para apagar a tarefa
+  void _deleteTask() async {
+    // Só pode apagar se estiver a editar (não criar)
+    if (_isCreating || widget.task == null) return;
+
+    // Confirmar antes de apagar
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar eliminação'),
+        content: Text(
+          'Tem a certeza que deseja eliminar a tarefa "${widget.task!.description}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true && mounted) {
+      final taskProvider = context.read<TaskDetailsProvider>();
+      final success = await taskProvider.deleteTask(widget.task!.id);
+
+      if (mounted) {
+        if (success) {
+          CustomSnackBar.showSuccess(context, 'Tarefa eliminada com sucesso!');
+          Navigator.of(context).pop(true); // Voltar e refrescar
+        } else {
+          CustomSnackBar.showError(context, 'Erro ao eliminar tarefa');
+        }
       }
     }
   }
@@ -160,13 +188,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   // Método para validar datas (adaptado para usar o Provider)
   void _validateDates(TaskDetailsProvider provider) {
     if (provider.plannedEndDate.isBefore(provider.plannedStartDate)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Data de fim deve ser posterior à data de início. Ajustada.',
-          ),
-          backgroundColor: Colors.orange,
-        ),
+      CustomSnackBar.showInfo(
+        context,
+        'Data de fim deve ser posterior à data de início. Ajustada.',
       );
       // Ajusta a data de fim para ser igual à data de início
       provider.setPlannedEndDate(provider.plannedStartDate);
@@ -195,6 +219,13 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          // Botão Apagar visível apenas se for edição
+          if (isEditing && isEditable)
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: provider.isLoading ? null : _deleteTask,
+              tooltip: 'Eliminar tarefa',
+            ),
           // Botão Guardar visível apenas se for editável
           if (isEditable)
             IconButton(
@@ -202,6 +233,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Icon(Icons.save),
               onPressed: provider.isLoading ? null : _saveForm,
+              tooltip: 'Guardar tarefa',
             ),
         ],
       ),

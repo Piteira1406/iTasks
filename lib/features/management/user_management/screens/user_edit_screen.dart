@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:itasks/core/widgets/custom_button.dart';
 import 'package:itasks/core/widgets/custom_text_field.dart';
+import 'package:itasks/core/widgets/custom_snackbar.dart';
 
 // Imports dos Models e Provider
 import 'package:itasks/core/models/app_user_model.dart';
@@ -180,18 +181,11 @@ class _UserEditScreenState extends State<UserEditScreen> {
 
         if (error != null) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(error), backgroundColor: Colors.red),
-            );
+            CustomSnackBar.showError(context, error);
           }
         } else {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Utilizador atualizado com sucesso!'),
-                backgroundColor: Colors.green,
-              ),
-            );
+            CustomSnackBar.showSuccess(context, 'Utilizador atualizado com sucesso!');
             Navigator.of(context).pop();
           }
         }
@@ -239,19 +233,12 @@ class _UserEditScreenState extends State<UserEditScreen> {
         if (error != null) {
           // Show error message
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(error), backgroundColor: Colors.red),
-            );
+            CustomSnackBar.showError(context, error);
           }
         } else {
           // Success
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Utilizador criado com sucesso!'),
-                backgroundColor: Colors.green,
-              ),
-            );
+            CustomSnackBar.showSuccess(context, 'Utilizador criado com sucesso!');
             Navigator.of(context).pop();
           }
         }
@@ -299,21 +286,45 @@ class _UserEditScreenState extends State<UserEditScreen> {
                       val!.contains('@') ? null : 'Email inválido',
                 ),
                 const SizedBox(height: 16),
-                CustomTextField(
-                  controller: _passwordController,
-                  hintText: 'Password',
-                  icon: Icons.lock,
-                  obscureText: true,
-                  validator: (val) {
-                    if (!_isEditing && (val == null || val.isEmpty)) {
-                      return 'Campo obrigatório';
-                    }
-                    if (val != null && val.isNotEmpty && val.length < 6) {
-                      return 'Mínimo 6 caracteres';
-                    }
-                    return null;
-                  },
-                ),
+                if (!_isEditing) ...[
+                  CustomTextField(
+                    controller: _passwordController,
+                    hintText: 'Password',
+                    icon: Icons.lock,
+                    obscureText: true,
+                    validator: (val) {
+                      if (val == null || val.isEmpty) {
+                        return 'Campo obrigatório';
+                      }
+                      if (val.length < 6) {
+                        return 'Mínimo 6 caracteres';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                ] else ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Colors.orange),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Para alterar password: utilizador deve fazer logout e usar '
+                            '"Esqueci a password" no ecrã de login.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
 
                 // --- Campos Condicionais ---

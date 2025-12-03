@@ -1,6 +1,7 @@
 // features/management/task_type_management/screens/task_type_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:itasks/core/widgets/custom_snackbar.dart';
 import 'package:itasks/core/widgets/glass_card.dart';
 import 'package:itasks/core/widgets/loading_spinner.dart';
 import 'package:itasks/features/management/task_type_management/widgets/task_type_dialogue.dart';
@@ -77,11 +78,9 @@ class _TaskTypeScreenState extends State<TaskTypeScreen> {
                 await context.read<TaskTypeProvider>().deleteTaskType(taskType);
                 
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Tipo de tarefa eliminado com sucesso!'),
-                      backgroundColor: Colors.green,
-                    ),
+                  CustomSnackBar.showSuccess(
+                    context,
+                    'Tipo de tarefa eliminado com sucesso!',
                   );
                 }
                 
@@ -90,11 +89,9 @@ class _TaskTypeScreenState extends State<TaskTypeScreen> {
               } catch (e) {
                 print('DEBUG: Erro ao apagar: $e');
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Erro ao eliminar: $e'),
-                      backgroundColor: Colors.red,
-                    ),
+                  CustomSnackBar.showError(
+                    context,
+                    'Erro ao eliminar: $e',
                   );
                 }
               }
@@ -123,11 +120,9 @@ class _TaskTypeScreenState extends State<TaskTypeScreen> {
     }
     
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${defaultTypes.length} tipos de tarefa criados com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
+      CustomSnackBar.showSuccess(
+        context,
+        '${defaultTypes.length} tipos de tarefa criados com sucesso!',
       );
     }
     

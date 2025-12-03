@@ -1,5 +1,6 @@
 import 'dart:ui'; // Para o ImageFilter
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:drag_and_drop_lists/drag_and_drop_lists.dart'; // O pacote novo
 
@@ -78,45 +79,258 @@ class _KanbanScreenState extends State<KanbanScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final List<DragAndDropList> kanbanLists = [
-          _buildDragList(context, "A Fazer", provider.todoTasks),
-          _buildDragList(context, "Em Execução", provider.doingTasks),
-          _buildDragList(context, "Concluído", provider.doneTasks),
-        ];
+        // Use implementação nativa para Web, drag_and_drop_lists para mobile
+        if (kIsWeb) {
+          return _buildWebKanban(context, provider);
+        } else {
+          return _buildMobileKanban(context, provider);
+        }
+      },
+    );
+  }
 
-        return Column(
-          children: [
-            if (provider.errorMessage.isNotEmpty)
-              Container(
-                width: double.infinity,
-                color: Colors.red.withValues(alpha: 0.8),
-                padding: const EdgeInsets.all(10),
-                child: Text(
-                  provider.errorMessage,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            Expanded(
-              child: DragAndDropLists(
-                children: kanbanLists,
-                axis: Axis.horizontal,
-                listWidth: 340, // Colunas ligeiramente mais largas
-                listDraggingWidth: 340,
-                listPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
+  /// Implementação Web usando Draggable/DragTarget nativo
+  Widget _buildWebKanban(BuildContext context, KanbanProvider provider) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final bool isReadOnly = (authProvider.appUser?.type == 'Programador');
 
-                // Removemos decorações globais para personalizar cada lista
-                onItemReorder: (oldItem, oldList, newItem, newList) {
-                  provider.handleTaskMove(oldItem, oldList, newItem, newList);
-                },
-                onListReorder: (_, __) {},
-              ),
+    return Column(
+      children: [
+        if (provider.errorMessage.isNotEmpty)
+          Container(
+            width: double.infinity,
+            color: Colors.red.withValues(alpha: 0.8),
+            padding: const EdgeInsets.all(10),
+            child: Text(
+              provider.errorMessage,
+              style: const TextStyle(color: Colors.white),
             ),
-          ],
+          ),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildWebColumn(
+                  context,
+                  "A Fazer",
+                  provider.todoTasks,
+                  0,
+                  isReadOnly,
+                  provider,
+                ),
+              ),
+              Expanded(
+                child: _buildWebColumn(
+                  context,
+                  "Em Execução",
+                  provider.doingTasks,
+                  1,
+                  isReadOnly,
+                  provider,
+                ),
+              ),
+              Expanded(
+                child: _buildWebColumn(
+                  context,
+                  "Concluído",
+                  provider.doneTasks,
+                  2,
+                  isReadOnly,
+                  provider,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWebColumn(
+    BuildContext context,
+    String title,
+    List<Task> tasks,
+    int columnIndex,
+    bool isReadOnly,
+    KanbanProvider provider,
+  ) {
+    return DragTarget<Map<String, dynamic>>(
+      onWillAcceptWithDetails: (details) => !isReadOnly,
+      onAcceptWithDetails: (details) {
+        final data = details.data;
+        final oldColumnIndex = data['columnIndex'] as int;
+        final oldItemIndex = data['itemIndex'] as int;
+        
+        // Calcular novo índice (adicionar no final da lista)
+        final newItemIndex = tasks.length;
+        
+        provider.handleTaskMove(
+          oldItemIndex,
+          oldColumnIndex,
+          newItemIndex,
+          columnIndex,
         );
       },
+      builder: (context, candidateData, rejectedData) {
+        final bool isOver = candidateData.isNotEmpty;
+        
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isOver
+                ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(
+              color: isOver
+                  ? Theme.of(context).primaryColor
+                  : Colors.transparent,
+              width: 2,
+            ),
+          ),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${tasks.length}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Tasks
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(8),
+                  itemCount: tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = tasks[index];
+                    final canDrag = task.taskStatus != 'Done' && !isReadOnly;
+                    
+                    if (canDrag) {
+                      return Draggable<Map<String, dynamic>>(
+                        data: {
+                          'task': task,
+                          'columnIndex': columnIndex,
+                          'itemIndex': index,
+                        },
+                        feedback: Material(
+                          elevation: 8,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 300,
+                            child: Opacity(
+                              opacity: 0.8,
+                              child: KanbanCardWidget(
+                                task: task,
+                                isReadOnly: isReadOnly,
+                              ),
+                            ),
+                          ),
+                        ),
+                        childWhenDragging: Opacity(
+                          opacity: 0.3,
+                          child: KanbanCardWidget(
+                            key: ValueKey(task.id),
+                            task: task,
+                            isReadOnly: isReadOnly,
+                          ),
+                        ),
+                        child: KanbanCardWidget(
+                          key: ValueKey(task.id),
+                          task: task,
+                          isReadOnly: isReadOnly,
+                        ),
+                      );
+                    } else {
+                      return KanbanCardWidget(
+                        key: ValueKey(task.id),
+                        task: task,
+                        isReadOnly: isReadOnly,
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Implementação Mobile usando drag_and_drop_lists
+  Widget _buildMobileKanban(BuildContext context, KanbanProvider provider) {
+    final List<DragAndDropList> kanbanLists = [
+      _buildDragList(context, "A Fazer", provider.todoTasks),
+      _buildDragList(context, "Em Execução", provider.doingTasks),
+      _buildDragList(context, "Concluído", provider.doneTasks),
+    ];
+
+    return Column(
+      children: [
+        if (provider.errorMessage.isNotEmpty)
+          Container(
+            width: double.infinity,
+            color: Colors.red.withValues(alpha: 0.8),
+            padding: const EdgeInsets.all(10),
+            child: Text(
+              provider.errorMessage,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        Expanded(
+          child: DragAndDropLists(
+            children: kanbanLists,
+            axis: Axis.horizontal,
+            listWidth: 340, // Colunas ligeiramente mais largas
+            listDraggingWidth: 340,
+            listPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+
+            // Removemos decorações globais para personalizar cada lista
+            onItemReorder: (oldItem, oldList, newItem, newList) {
+              provider.handleTaskMove(oldItem, oldList, newItem, newList);
+            },
+            onListReorder: (_, __) {},
+          ),
+        ),
+      ],
     );
   }
 

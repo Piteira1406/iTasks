@@ -3,9 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:itasks/core/widgets/custom_button.dart';
 import 'package:itasks/core/widgets/custom_text_field.dart';
+import 'package:itasks/core/widgets/custom_snackbar.dart';
 import 'package:itasks/core/widgets/glass_card.dart'; // O seu widget de Glassmorphism
 import 'package:itasks/core/widgets/loading_spinner.dart';
 import 'package:itasks/features/auth/providers/login_provider.dart';
+import 'package:itasks/core/services/auth_service.dart';
 import 'package:provider/provider.dart';
 // Imports relativos para os widgets do core
 
@@ -46,6 +48,70 @@ class _LoginFormState extends State<LoginForm> {
     // e o `build` em baixo vai mostrar a mensagem de erro.
     // Se o login for bem-sucedido, o AuthProvider global
     // vai ser atualizado e o main.dart vai navegar para o KanbanScreen.
+  }
+
+  Future<void> _showForgotPasswordDialog() async {
+    final emailController = TextEditingController();
+    
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Recuperar Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Introduza o email da conta para receber um link de recuperação de password.',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.email),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final email = emailController.text.trim();
+              if (email.isEmpty || !email.contains('@')) {
+                CustomSnackBar.showError(dialogContext, 'Email inválido');
+                return;
+              }
+              
+              Navigator.of(dialogContext).pop();
+              
+              final authService = context.read<AuthService>();
+              final error = await authService.sendPasswordResetEmail(email: email);
+              
+              if (mounted) {
+                if (error == null) {
+                  CustomSnackBar.showSuccess(
+                    context,
+                    'Email de recuperação enviado! Verifique a sua caixa de entrada.',
+                  );
+                } else {
+                  CustomSnackBar.showError(context, error);
+                }
+              }
+            },
+            child: const Text('Enviar'),
+          ),
+        ],
+      ),
+    );
+    
+    emailController.dispose();
   }
 
   @override
@@ -103,7 +169,18 @@ class _LoginFormState extends State<LoginForm> {
                   onPressed: _submitLogin, // Chama a função de submit
                 ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+
+              // --- Botão Esqueci a Password ---
+              TextButton(
+                onPressed: _showForgotPasswordDialog,
+                child: const Text(
+                  'Esqueci a password',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ),
+
+              const SizedBox(height: 8),
 
               // --- Lógica de Erro ---
               if (loginProvider.state == LoginState.error &&
