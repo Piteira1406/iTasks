@@ -6,13 +6,13 @@ service cloud.firestore {
     // Função auxiliar para verificar se o usuário é Manager
     function isManager() {
       return request.auth != null && 
-             exists(/databases/$(database)/documents/managers/$(request.auth.uid));
+             exists(/databases/$(database)/documents/Managers/$(request.auth.uid));
     }
     
     // Função auxiliar para verificar se o usuário é Developer
     function isDeveloper() {
       return request.auth != null && 
-             exists(/databases/$(database)/documents/developers/$(request.auth.uid));
+             exists(/databases/$(database)/documents/Developers/$(request.auth.uid));
     }
     
     // Função para verificar se o usuário é autenticado
@@ -20,43 +20,43 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // Collection: appUsers - Todos podem ler, apenas Manager pode criar/editar
-    match /appUsers/{userId} {
+    // Collection: Users - Todos podem ler, apenas Manager pode criar/editar
+    match /Users/{userId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isManager();
     }
     
-    // Collection: managers - Todos autenticados podem ler, apenas Manager pode criar/editar
-    match /managers/{managerId} {
+    // Collection: Managers - Leitura livre para autenticados (necessário para login)
+    match /Managers/{managerId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isManager();
     }
     
-    // Collection: developers - Todos autenticados podem ler, apenas Manager pode criar/editar
-    match /developers/{developerId} {
+    // Collection: Developers - Leitura livre para autenticados (necessário para login)
+    match /Developers/{developerId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isManager();
     }
     
-    // Collection: tasks - Developers podem ler e atualizar apenas suas tarefas
-    match /tasks/{taskId} {
+    // Collection: Tasks - Manager: acesso total, Developer: apenas suas tarefas com campos limitados
+    match /Tasks/{taskId} {
       allow read: if isAuthenticated();
       allow create, delete: if isManager();
-      allow update: if isManager() || 
-                      (isDeveloper() && 
-                       resource.data.idDeveloper == get(/databases/$(database)/documents/developers/$(request.auth.uid)).data.idDeveloper &&
-                       // Developer só pode alterar taskStatus e datas
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['taskStatus', 'realStartDate', 'realEndDate']));
+      // Manager pode atualizar qualquer coisa, Developer só suas tasks e campos específicos
+      allow update: if isManager();
+      allow update: if isDeveloper() && 
+                       resource.data.idDeveloper == get(/databases/$(database)/documents/Developers/$(request.auth.uid)).data.idDeveloper &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['taskStatus', 'realStartDate', 'realEndDate']);
     }
     
-    // Collection: taskTypes - Todos podem ler, apenas Manager pode criar/editar
-    match /taskTypes/{typeId} {
+    // Collection: TaskTypes - Todos podem ler, apenas Manager pode criar/editar
+    match /TaskTypes/{typeId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isManager();
     }
     
-    // Collection: counters - Apenas Manager pode ler/escrever
-    match /counters/{counterId} {
+    // Collection: Counters - Apenas Manager pode ler/escrever
+    match /Counters/{counterId} {
       allow read, write: if isManager();
     }
   }
