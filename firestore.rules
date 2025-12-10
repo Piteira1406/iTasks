@@ -3,61 +3,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Função auxiliar para verificar se o usuário é Manager
-    function isManager() {
-      return request.auth != null && 
-             exists(/databases/$(database)/documents/Managers/$(request.auth.uid));
-    }
-    
-    // Função auxiliar para verificar se o usuário é Developer
-    function isDeveloper() {
-      return request.auth != null && 
-             exists(/databases/$(database)/documents/Developers/$(request.auth.uid));
-    }
-    
-    // Função para verificar se o usuário é autenticado
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    // Collection: Users - Todos podem ler, apenas Manager pode criar/editar
-    match /Users/{userId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isManager();
-    }
-    
-    // Collection: Managers - Leitura livre para autenticados (necessário para login)
-    match /Managers/{managerId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isManager();
-    }
-    
-    // Collection: Developers - Leitura livre para autenticados (necessário para login)
-    match /Developers/{developerId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isManager();
-    }
-    
-    // Collection: Tasks - Manager: acesso total, Developer: apenas suas tarefas com campos limitados
-    match /Tasks/{taskId} {
-      allow read: if isAuthenticated();
-      allow create, delete: if isManager();
-      // Manager pode atualizar qualquer coisa, Developer só suas tasks e campos específicos
-      allow update: if isManager();
-      allow update: if isDeveloper() && 
-                       resource.data.idDeveloper == get(/databases/$(database)/documents/Developers/$(request.auth.uid)).data.idDeveloper &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['taskStatus', 'realStartDate', 'realEndDate']);
-    }
-    
-    // Collection: TaskTypes - Todos podem ler, apenas Manager pode criar/editar
-    match /TaskTypes/{typeId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isManager();
-    }
-    
-    // Collection: Counters - Apenas Manager pode ler/escrever
-    match /Counters/{counterId} {
-      allow read, write: if isManager();
+    // Acesso total para todos autenticados (temporário para debug)
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
