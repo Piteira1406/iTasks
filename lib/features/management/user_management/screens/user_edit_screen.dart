@@ -55,7 +55,6 @@ class _UserEditScreenState extends State<UserEditScreen> {
       userManagementProvider.fetchManagers();
 
       if (_isEditing) {
-      if (_isEditing) {
         await _loadUserProfileData();
       }
     });

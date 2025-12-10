@@ -42,6 +42,13 @@ class Task {
   factory Task.fromFirestore(DocumentSnapshot doc) {
     final map = doc.data() as Map<String, dynamic>;
 
+    DateTime? timestampToDateTime(dynamic timestamp) {
+      if (timestamp is Timestamp) {
+        return timestamp.toDate();
+      }
+      return null;
+    }
+
     return Task(
       id: doc.id, // O ID vem do documento, não do 'map'
       description: map['description'] ?? '',
@@ -56,7 +63,6 @@ class Task {
       previsionStartDate:
           timestampToDateTime(map['previsionStartDate']) ?? DateTime.now(),
 
-      // Datas reais são nulas se não existirem
       realEndDate: timestampToDateTime(map['realEndDate']),
       realStartDate: timestampToDateTime(map['realStartDate']),
 

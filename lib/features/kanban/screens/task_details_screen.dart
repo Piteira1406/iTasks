@@ -36,10 +36,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<TaskDetailsProvider>(context, listen: false);
 
-      // 1. Carregar listas (devs e tipos)
-      provider.loadDropdownData();
+      provider.loadDropdownLists();
 
-      // 2. Definir dados da Task (se edição) ou limpar (se criação)
       if (widget.task != null) {
         provider.setTaskData(widget.task!);
       } else {
