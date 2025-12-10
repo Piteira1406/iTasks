@@ -74,7 +74,6 @@ class CsvService {
     String? customFileName,
   }) async {
     try {
-      // Criar dados CSV
       List<List<dynamic>> rows = [
         ['Métrica', 'Valor'],
         ['Data do Relatório', _dateTimeFormat.format(DateTime.now())],

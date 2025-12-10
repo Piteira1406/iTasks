@@ -1,16 +1,12 @@
 // lib/features/kanban/widgets/kanban_card_widget.dart
 
 import 'package:flutter/material.dart';
-import 'package:itasks/core/models/task_model.dart'; // <-- O ficheiro que contém 'class Task'
+import 'package:itasks/core/models/task_model.dart';
 import 'package:itasks/core/widgets/glass_card.dart';
 import 'package:itasks/features/kanban/screens/task_details_screen.dart';
-// TODO: Importar providers para mostrar nomes
-// import 'package:provider/provider.dart';
-// import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
-// import 'package:itasks/features/management/task_type_management/providers/task_type_provider.dart';
 
 class KanbanCardWidget extends StatelessWidget {
-  final Task task; // <-- 1. Usa a classe 'Task' (como pediu)
+  final Task task;
   final bool isReadOnly;
 
   const KanbanCardWidget({
@@ -31,11 +27,6 @@ class KanbanCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Usar os providers para fazer 'lookup' dos nomes
-    // final devName = context.watch<UserManagementProvider>().getUserNameById(task.idDeveloper);
-    // final taskTypeName = context.watch<TaskTypeProvider>().getTaskTypeNameById(task.idTaskType);
-
-    // Temporário: Mostra os IDs até os providers estarem ligados
     final String devName = task.idDeveloper.toString();
     final String taskTypeName = task.idTaskType.toString();
 
@@ -48,14 +39,11 @@ class KanbanCardWidget extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              // --- 2. ESTA É A CORREÇÃO (para a [cite: image_aaf489.png]) ---
-              // Faz o cartão "encolher" ao tamanho do seu conteúdo
               mainAxisSize: MainAxisSize.min,
-              // --- FIM DA CORREÇÃO ---
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  task.description, // <-- 3. Usa 'description' do Task
+                  task.description,
                   style: Theme.of(context).textTheme.titleMedium,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,

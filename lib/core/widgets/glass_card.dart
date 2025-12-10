@@ -1,4 +1,3 @@
-// Modern Glass Morphism Card with advanced styling
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:itasks/core/theme/app_colors.dart';

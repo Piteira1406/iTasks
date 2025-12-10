@@ -19,7 +19,6 @@ class KanbanProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
 
-  // --- Getters para as colunas (já ordenados) ---
   List<Task> get todoTasks => _getSortedList('ToDo');
   List<Task> get doingTasks => _getSortedList('Doing');
   List<Task> get doneTasks => _getSortedList('Done');
@@ -69,7 +68,6 @@ class KanbanProvider with ChangeNotifier {
     );
   }
 
-  // --- 3. NOVA FUNÇÃO ÚNICA PARA DRAG-AND-DROP ---
   Future<void> handleTaskMove(
     int oldItemIndex,
     int oldListIndex,
@@ -85,7 +83,6 @@ class KanbanProvider with ChangeNotifier {
     // Encontra a tarefa que foi movida
     final Task task = _getSortedList(oldStatus)[oldItemIndex];
 
-    // --- 4. REGRAS DE NEGÓCIO (DO ENUNCIADO) ---
     final int currentUserId = _authProvider.appUser?.id ?? 0;
 
     // Regra: Programador só pode mover as suas próprias tarefas
@@ -193,7 +190,6 @@ class KanbanProvider with ChangeNotifier {
     // Get all tasks in the target column sorted by order
     final tasksInColumn = _getSortedList(newStatus);
 
-    // Update order for all affected tasks
     for (int i = 0; i < tasksInColumn.length; i++) {
       if (tasksInColumn[i].order != i) {
         await _firestoreService.updateTaskOrder(tasksInColumn[i].id, i);
@@ -201,7 +197,6 @@ class KanbanProvider with ChangeNotifier {
     }
   }
 
-  // Helper para mostrar erros temporários
   void _setError(String message) {
     _errorMessage = message;
     notifyListeners();

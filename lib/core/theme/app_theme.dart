@@ -1,4 +1,3 @@
-// Modern Design System - Main Theme
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,7 +6,6 @@ import 'app_typography.dart';
 import 'app_dimensions.dart';
 
 class AppTheme {
-  // ==================== LIGHT THEME ====================
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
@@ -187,7 +185,6 @@ class AppTheme {
     );
   }
   
-  // ==================== DARK THEME ====================
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,

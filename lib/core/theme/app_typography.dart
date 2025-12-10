@@ -1,12 +1,9 @@
-// Design System - Typography
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTypography {
-  // Font Family - Using Inter for clean, modern look
   static String get fontFamily => GoogleFonts.inter().fontFamily!;
   
-  // ==================== FONT WEIGHTS ====================
   static const FontWeight light = FontWeight.w300;
   static const FontWeight regular = FontWeight.w400;
   static const FontWeight medium = FontWeight.w500;
@@ -14,7 +11,6 @@ class AppTypography {
   static const FontWeight bold = FontWeight.w700;
   static const FontWeight extraBold = FontWeight.w800;
   
-  // ==================== DISPLAY STYLES ====================
   static TextStyle display1 = GoogleFonts.inter(
     fontSize: 48,
     fontWeight: extraBold,
@@ -29,7 +25,6 @@ class AppTypography {
     letterSpacing: -0.5,
   );
   
-  // ==================== HEADING STYLES ====================
   static TextStyle h1 = GoogleFonts.inter(
     fontSize: 32,
     fontWeight: bold,
@@ -68,7 +63,6 @@ class AppTypography {
     height: 1.5,
   );
   
-  // ==================== BODY STYLES ====================
   static TextStyle bodyLarge = GoogleFonts.inter(
     fontSize: 16,
     fontWeight: regular,
@@ -87,7 +81,6 @@ class AppTypography {
     height: 1.5,
   );
   
-  // ==================== LABEL STYLES ====================
   static TextStyle labelLarge = GoogleFonts.inter(
     fontSize: 14,
     fontWeight: medium,
@@ -109,7 +102,6 @@ class AppTypography {
     letterSpacing: 0.5,
   );
   
-  // ==================== BUTTON STYLES ====================
   static TextStyle buttonLarge = GoogleFonts.inter(
     fontSize: 16,
     fontWeight: semiBold,
@@ -131,7 +123,6 @@ class AppTypography {
     letterSpacing: 0.5,
   );
   
-  // ==================== CAPTION & OVERLINE ====================
   static TextStyle caption = GoogleFonts.inter(
     fontSize: 12,
     fontWeight: regular,

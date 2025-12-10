@@ -8,31 +8,25 @@ import 'package:itasks/core/models/task_type_model.dart';
 class TaskDetailsProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
 
-  // --- Listas para os Dropdowns ---
   List<AppUser> _developersList = [];
 
-  // CORREÇÃO: Agora é uma Lista de TaskType, não dynamic
   List<TaskTypeModel> _taskTypesList = [];
 
   List<AppUser> get developersList => _developersList;
 
-  // CORREÇÃO: O getter também devolve List<TaskType>
   List<TaskTypeModel> get taskTypesList => _taskTypesList;
 
-  // --- Estado do Formulário ---
   String _description = '';
   int _storyPoints = 0;
   int _executionOrder = 0;
   int? _selectedDeveloperId;
   int? _selectedTaskTypeId;
 
-  // Getters
   String get description => _description;
   int get storyPoints => _storyPoints;
   int? get selectedDeveloperId => _selectedDeveloperId;
   int? get selectedTaskTypeId => _selectedTaskTypeId;
 
-  // Datas
   DateTime _plannedStartDate = DateTime.now();
   DateTime _plannedEndDate = DateTime.now().add(const Duration(days: 1));
   
@@ -50,8 +44,7 @@ class TaskDetailsProvider with ChangeNotifier {
 
   TaskDetailsProvider(this._firestoreService);
 
-  // --- 1. Carregar Listas (Dropdowns) ---
-  Future<void> loadDropdownData() async {
+  Future<void> loadDropdownLists() async {
     try {
       // Buscar utilizadores que são 'Developer'
       final allUsers = await _firestoreService.getUsers();
@@ -66,7 +59,6 @@ class TaskDetailsProvider with ChangeNotifier {
     }
   }
 
-  // --- 2. Preencher formulário (Modo Edição) ---
   void setTaskData(Task task) {
     _description = task.description;
     _storyPoints = task.storyPoints;
@@ -85,7 +77,6 @@ class TaskDetailsProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // --- 3. Limpar formulário (Modo Criação) ---
   void clearForm() {
     _description = '';
     _storyPoints = 0;
@@ -95,7 +86,6 @@ class TaskDetailsProvider with ChangeNotifier {
     _plannedStartDate = DateTime.now();
     _plannedEndDate = DateTime.now().add(const Duration(days: 1));
     
-    // Limpar dados originais
     _originalTaskStatus = null;
     _originalCreationDate = null;
     _originalRealStartDate = null;
@@ -135,7 +125,6 @@ class TaskDetailsProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // --- 4. Salvar ---
   Future<bool> saveTask(String managerId, {String? existingTaskId}) async {
     _isLoading = true;
     notifyListeners();
@@ -182,7 +171,6 @@ class TaskDetailsProvider with ChangeNotifier {
     }
   }
 
-  /// Delete existing task
   Future<bool> deleteTask(String taskId) async {
     _isLoading = true;
     notifyListeners();

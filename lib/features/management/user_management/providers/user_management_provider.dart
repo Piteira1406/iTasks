@@ -23,8 +23,6 @@ class UserManagementProvider with ChangeNotifier {
 
   UserManagementProvider(this._firestoreService, this._authService);
   
-  // CORREÇÃO: Tornei este método público (sem o underscore _)
-  // Assim podes chamar provider.fetchUsers() noutros ecrãs se precisares
   Future<void> fetchUsers() async {
     _isLoading = true;
     notifyListeners();
@@ -59,14 +57,13 @@ class UserManagementProvider with ChangeNotifier {
   Future<String?> createNewUser({
     required String email,
     required String password,
-    required AppUser appUser, // Template com nome, username, type
+    required AppUser appUser,
     Manager? manager,
     Developer? developer,
   }) async {
     _isLoading = true;
     notifyListeners();
 
-    // --- PASSO 1: VERIFICAR USERNAME ÚNICO ---
     try {
       final bool isUnique = await _firestoreService.isUsernameUnique(
         appUser.username,
@@ -77,13 +74,11 @@ class UserManagementProvider with ChangeNotifier {
         return "Erro: O Username '${appUser.username}' já está a ser utilizado.";
       }
     } catch (e) {
-      // Se der erro a verificar, assumimos que não dá para continuar
       _isLoading = false;
       notifyListeners();
       return "Erro ao verificar username: $e";
     }
 
-    // --- PASSO 2: CRIAR NO AUTH ---
     late UserCredential userCredential;
 
     try {
@@ -112,15 +107,12 @@ class UserManagementProvider with ChangeNotifier {
 
     final uid = userCredential.user!.uid;
 
-    // --- PASSO 3: CRIAR NA BASE DE DADOS ---
     try {
-      // Gerar IDs únicos
       final int userId = await _firestoreService.getNextUserId();
 
-      // 3.1 Criar o AppUser (na coleção 'Users')
       AppUser newUser = AppUser(
         id: userId,
-        uid: uid, // Firebase Auth UID
+        uid: uid,
         name: appUser.name,
         username: appUser.username,
         email: email,
@@ -129,41 +121,33 @@ class UserManagementProvider with ChangeNotifier {
 
       await _firestoreService.createUser(newUser, uid);
 
-      // 3.2 Criar o Manager ou Developer
       if (appUser.type == 'Manager' && manager != null) {
         final int managerId = await _firestoreService.getNextManagerId();
         Manager newManager = Manager(
-          id: managerId, // Firestore gera
+          id: managerId,
           name: appUser.name,
           department: manager.department,
-          idUser: userId, // Liga ao Auth UID
+          idUser: userId,
         );
         await _firestoreService.createManager(newManager);
       } else if (appUser.type == 'Developer' && developer != null) {
-        // Mudei para Developer (estava Programador no texto antigo, mas o objeto é Developer)
         final int developerId = await _firestoreService.getNextDeveloperId();
         Developer newDeveloper = Developer(
-          id: developerId, // Firestore gera
+          id: developerId,
           name: appUser.name,
           experienceLevel: developer.experienceLevel,
-          idUser: userId, // Liga ao Auth UID
+          idUser: userId,
           idManager: developer.idManager,
         );
         await _firestoreService.createDeveloper(newDeveloper);
       }
-      // Nota: Se for 'Programador' mas não houver objeto developer,
-      // a lógica anterior lançava exceção. Mantive assim, mas garante que o UI envia os dados.
 
-      // --- MELHORIA: ATUALIZAR A LISTA LOCAL ---
-      // Assim o novo user aparece logo na lista sem reiniciar a app
       await fetchUsers();
 
       _isLoading = false;
       notifyListeners();
-      return null; // Sucesso (null significa sem erro)
+      return null;
     } catch (e) {
-      // --- PASSO 4: ROLLBACK ---
-      // Se falhar na BD, apaga do Auth
       try {
         await userCredential.user!.delete();
       } catch (deleteError) {
@@ -180,7 +164,6 @@ class UserManagementProvider with ChangeNotifier {
     }
   }
 
-  /// Update existing user with complete profile
   Future<String?> updateUser({
     required String uid,
     required AppUser appUser,
@@ -191,7 +174,6 @@ class UserManagementProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Validation: If changing username, check it's unique
       final currentUser = await _firestoreService.getUserById(uid);
       if (currentUser != null && currentUser.username != appUser.username) {
         final isUnique = await _firestoreService.isUsernameUnique(
@@ -204,10 +186,6 @@ class UserManagementProvider with ChangeNotifier {
         }
       }
 
-      // Note: Password updates are not supported due to Firebase limitations
-      // Cloud Functions with Admin SDK would be required (Blaze plan)
-
-      // Update user and profile
       await _firestoreService.updateUserComplete(
         uid: uid,
         appUser: appUser,
@@ -217,7 +195,7 @@ class UserManagementProvider with ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
-      return null; // Success
+      return null;
     } catch (e) {
       LoggerService.error('Error updating user', e);
       _isLoading = false;
@@ -226,7 +204,6 @@ class UserManagementProvider with ChangeNotifier {
     }
   }
 
-  /// Delete user with cascade (profile + auth)
   Future<String?> deleteUser({
     required String uid,
     required AppUser appUser,
@@ -237,7 +214,6 @@ class UserManagementProvider with ChangeNotifier {
     try {
       LoggerService.info('deleteUser: uid=$uid, type=${appUser.type}');
       
-      // Check if user has assigned tasks
       if (appUser.type == 'Developer') {
         LoggerService.info('Verificando tarefas do developer...');
         final developer = await _firestoreService.getDeveloperByUserId(uid);
@@ -258,7 +234,6 @@ class UserManagementProvider with ChangeNotifier {
         }
       }
 
-      // Check if Manager has developers assigned
       if (appUser.type == 'Manager') {
         LoggerService.info('Verificando developers do manager...');
         final manager = await _firestoreService.getManagerByUserId(uid);
@@ -280,18 +255,17 @@ class UserManagementProvider with ChangeNotifier {
         }
       }
 
-      // Perform cascade delete
       LoggerService.info('Executando deleteUserComplete...');
       await _firestoreService.deleteUserComplete(
         uid: uid,
         appUser: appUser,
-        deleteFromAuth: false, // Cannot delete from Auth without Admin SDK
+        deleteFromAuth: false,
       );
 
       LoggerService.info('Delete concluído com sucesso');
       _isLoading = false;
       notifyListeners();
-      return null; // Success
+      return null;
     } catch (e) {
       LoggerService.error('Error deleting user', e);
       _isLoading = false;
@@ -299,6 +273,4 @@ class UserManagementProvider with ChangeNotifier {
       return "Erro ao eliminar utilizador: ${e.toString()}";
     }
   }
-
-  // TODO: Adicionar métodos para updateUser e deleteUser
 }

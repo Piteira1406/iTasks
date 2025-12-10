@@ -112,11 +112,7 @@ class TaskDetailsProvider with ChangeNotifier {
       LoggerService.error('Error saving task', e);
       _isLoading = false;
       notifyListeners();
-      return false; // Falha
+      return false;
     }
   }
-
-  // TODO: Adicionar método 'loadTaskForEdit(String taskId)'
-  // Este método irá buscar uma tarefa ao Firestore e preencher os campos
-  // do formulário para edição.
 }

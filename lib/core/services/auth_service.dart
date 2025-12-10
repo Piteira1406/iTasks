@@ -7,29 +7,14 @@ class AuthService {
 
   User? get currentUser => _auth.currentUser;
 
-  //Auth methods like signIn, signOut, register can be added here. WARNING: REGISTER DONT CREATE FIRESTORE USER DOCUMENT!! ONLY AUTH USER.
-
-  Future<UserCredential?> signInWithEmail({required String email, required String password}) async {
-    try {
-      return await _auth.signInWithEmailAndPassword(email: email, password: password);
-
-    } on FirebaseAuthException catch (e) {
-      print(e.message);
-      return null;
-    }
-  }
-  Future<void> signOut() async {
-    await _auth.signOut();
-  }
-
-  Future<UserCredential?> createUserInAuth({
-      required String email,
-      required String password
+  Future<UserCredential?> signInWithEmail({
+    required String email,
+    required String password,
   }) async {
     try {
-      return await _auth.createUserWithEmailAndPassword(
-          email: email,
-          password: password
+      return await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
       );
     } on FirebaseAuthException catch (e) {
       print(e.message);
@@ -37,11 +22,32 @@ class AuthService {
     }
   }
 
-  /// Send password reset email
+  Future<void> signOut() async {
+    await _auth.signOut();
+  }
+
+  Future<UserCredential?> createUserInAuth({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final secondaryAuth = FirebaseAuth.instanceFor(app: _auth.app);
+      final credential = await secondaryAuth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      await secondaryAuth.signOut();
+      return credential;
+    } on FirebaseAuthException catch (e) {
+      print(e.message);
+      return null;
+    }
+  }
+
   Future<String?> sendPasswordResetEmail({required String email}) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
-      return null; // Success
+      return null;
     } on FirebaseAuthException catch (e) {
       switch (e.code) {
         case 'user-not-found':
@@ -55,6 +61,4 @@ class AuthService {
       return 'Erro ao enviar email: ${e.toString()}';
     }
   }
-
-
 }

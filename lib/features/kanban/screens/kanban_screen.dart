@@ -310,7 +310,6 @@ class _KanbanScreenState extends State<KanbanScreen> {
           ),
           child: Column(
             children: [
-              // Modern Header
               Container(
                 padding: EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
@@ -383,7 +382,6 @@ class _KanbanScreenState extends State<KanbanScreen> {
                   ],
                 ),
               ),
-              // Tasks
               Expanded(
                 child: tasks.isEmpty
                     ? Center(
@@ -523,16 +521,15 @@ class _KanbanScreenState extends State<KanbanScreen> {
     final bool isReadOnly = (authProvider.appUser?.type == 'Programador');
 
     return DragAndDropList(
-      // AQUI ESTÁ O TRUQUE: O Header é um Container com estilo Glass
       header: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         margin: const EdgeInsets.only(
           bottom: 8,
-        ), // Espaço entre titulo e cartões
+        ),
         decoration: BoxDecoration(
           color: Theme.of(
             context,
-          ).cardColor.withValues(alpha: 0.6), // Vidro fosco
+          ).cardColor.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(15),
           border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
           boxShadow: [
@@ -580,7 +577,6 @@ class _KanbanScreenState extends State<KanbanScreen> {
     );
   }
 
-  /// Modern Navigation Drawer
   Widget _buildGlassDrawer(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final themeProvider = context.watch<ThemeProvider>();
@@ -615,7 +611,6 @@ class _KanbanScreenState extends State<KanbanScreen> {
             ),
             child: Column(
               children: [
-                // Modern Gradient Header
                 Container(
                   padding: EdgeInsets.all(AppSpacing.xl2),
                   decoration: BoxDecoration(
@@ -638,7 +633,6 @@ class _KanbanScreenState extends State<KanbanScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Avatar with gradient border
                         Container(
                           padding: EdgeInsets.all(AppSpacing.xs),
                           decoration: BoxDecoration(
@@ -660,8 +654,6 @@ class _KanbanScreenState extends State<KanbanScreen> {
                           ),
                         ),
                         SizedBox(height: AppSpacing.lg),
-                        
-                        // User Info
                         Text(
                           user?.name ?? "Utilizador",
                           style: AppTypography.h5.copyWith(

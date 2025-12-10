@@ -45,7 +45,6 @@ class ReportProvider extends ChangeNotifier {
   DateTime? _startDate;
   DateTime? _endDate;
 
-  // Getters
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get successMessage => _successMessage;
@@ -132,14 +131,12 @@ class ReportProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Carregar dados iniciais
   Future<void> loadInitialData() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // Carregar em paralelo para ser mais rápido
       final results = await Future.wait([
         _firestoreService.getAllDevelopers(),
         _firestoreService.getAllManagers(),
@@ -240,7 +237,6 @@ class ReportProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Criar mapeamentos de IDs para nomes
       final developerNames = <int, String>{};
       for (var dev in _developers) {
         developerNames[dev.id] = dev.name;

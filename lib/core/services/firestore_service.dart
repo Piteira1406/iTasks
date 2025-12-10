@@ -6,7 +6,6 @@ import 'package:itasks/core/models/task_model.dart';
 import 'package:itasks/core/models/task_type_model.dart'; // <-- O NOME DA CLASSE AQUI DENTRO É 'TaskType'
 import 'package:itasks/core/services/logger_service.dart';
 
-// ADICIONADO: Padronização dos nomes das coleções
 const String usersCollection = 'Users';
 const String managersCollection = 'Managers';
 const String developersCollection = 'Developers';
@@ -16,8 +15,6 @@ const String countersCollection = 'Counters';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-
-  // --- GERADOR DE IDs ---
 
   Future<int> getNextUserId() async {
     return await _getNextId('userId');
@@ -454,7 +451,6 @@ class FirestoreService {
   }
 
   Stream<List<TaskTypeModel>> getTaskTypesStream() {
-    // <-- CORRIGIDO: de 'TaskTypeModel' para 'TaskType'
     return _db.collection(taskTypesCollection).snapshots().map((snapshot) {
       return snapshot.docs
           .map((doc) => TaskTypeModel.fromFirestore(doc))

@@ -3,8 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:itasks/core/services/auth_service.dart';
 import 'package:itasks/core/services/logger_service.dart';
 import 'package:itasks/core/services/firestore_service.dart';
-
-// Modelos que tu enviaste
 import 'package:itasks/core/models/app_user_model.dart';
 import 'package:itasks/core/models/developer_model.dart';
 import 'package:itasks/core/models/manager_model.dart';
@@ -18,33 +16,26 @@ class AuthProvider with ChangeNotifier {
   AuthStatus _status = AuthStatus.uninitialized;
   User? _firebaseUser;
   AppUser? _appUser;
-
-  // CORRIGIDO: Adicionado estado para os perfis específicos
   Manager? _managerProfile;
   Developer? _developerProfile;
 
-  // Getters públicos
   AuthStatus get status => _status;
   User? get firebaseUser => _firebaseUser;
   AppUser? get appUser => _appUser;
   Manager? get managerProfile => _managerProfile;
   Developer? get developerProfile => _developerProfile;
-
   bool get isAuthenticated => _status == AuthStatus.authenticated;
-
-  // ADICIONADO: Getters de permissão (para a UI usar)
   bool get isManager => _appUser?.type == 'Manager';
   bool get isDeveloper => _appUser?.type == 'Developer';
 
   AuthProvider(this._authService, this._firestoreService) {
     LoggerService.info('AuthProvider: Inicializando e escutando authStateChanges');
     
-    // Verificar imediatamente se há user logado
     final currentUser = _authService.currentUser;
     if (currentUser == null) {
       _status = AuthStatus.unauthenticated;
       LoggerService.info('AuthProvider: Nenhum user logado inicialmente - STATUS: ${_status}');
-      notifyListeners(); // IMPORTANTE: Notificar para o AuthWrapper atualizar
+      notifyListeners();
     }
     
     _authService.authStateChanges.listen(_onAuthStateChanged);
@@ -52,7 +43,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _onAuthStateChanged(User? user) async {
     LoggerService.info('AuthProvider: authStateChanged - user: ${user?.email ?? "null"}');
-    // Limpar dados ao fazer logout
+    
     if (user == null) {
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
@@ -61,7 +52,6 @@ class AuthProvider with ChangeNotifier {
       _developerProfile = null;
     } else {
       _firebaseUser = user;
-      // Buscar todos os dados ao fazer login
       await _fetchAppUser(user.uid);
       _status = AuthStatus.authenticated;
     }
@@ -70,29 +60,23 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _fetchAppUser(String uid) async {
     LoggerService.info('AuthProvider: Buscando AppUser para uid: $uid');
-    // 1. Buscar o AppUser (da coleção 'Users')
     _appUser = await _firestoreService.getUserById(uid);
     LoggerService.info('AuthProvider: AppUser encontrado: ${_appUser?.name}');
 
-    // 2. CORRIGIDO: Buscar o perfil específico (Manager ou Developer)
     if (_appUser != null) {
       if (_appUser!.type == 'Manager') {
-        // Usar o novo método do firestore_service
         _managerProfile = await _firestoreService.getManagerByUserId(uid);
       } else if (_appUser!.type == 'Developer') {
-        // Usar o novo método do firestore_service
         _developerProfile = await _firestoreService.getDeveloperByUserId(uid);
       }
     }
     notifyListeners();
   }
 
-  // CORRIGIDO: Devolve String? de erro em vez de bool
   Future<String?> signIn(String email, String password) async {
     try {
       await _authService.signInWithEmail(email: email, password: password);
-      // O listener _onAuthStateChanged trata de buscar os dados
-      return null; // Sucesso
+      return null;
     } on FirebaseAuthException catch (e) {
       LoggerService.error('Sign in error', e);
       if (e.code == 'user-not-found' ||
@@ -107,7 +91,4 @@ class AuthProvider with ChangeNotifier {
   Future<void> signOut() async {
     await _authService.signOut();
   }
-}
-
-  // A lógica de 'CreateUser' está (e deve ficar)
-  // no 'UserManagementProvider', como tu já fizeste. 
+} 

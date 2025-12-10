@@ -260,7 +260,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // --- Título ---
                       Text(
                         isEditing ? "Detalhes da Tarefa" : "Criar Nova Tarefa",
                         style: Theme.of(context).textTheme.headlineSmall,
@@ -268,7 +267,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       const Divider(color: Colors.white30),
                       const SizedBox(height: 20),
 
-                      // --- Descrição ---
                       _buildTextField(
                         controller: _descController,
                         label: 'Descrição',
@@ -278,7 +276,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // --- Story Points ---
                       _buildTextField(
                         controller: _pointsController,
                         label: 'Story Points',
@@ -294,7 +291,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // --- Dropdown: Tipo de Tarefa ---
                       _buildTaskTypeDropdown(
                         provider.taskTypesList,
                         provider.selectedTaskTypeId,
@@ -303,7 +299,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // --- Dropdown: Programador ---
                       _buildDeveloperDropdown(
                         provider.developersList,
                         provider.selectedDeveloperId,
@@ -312,7 +307,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // --- Datas Planeadas ---
                       Text(
                         'Datas Planeadas',
                         style: Theme.of(context).textTheme.titleMedium,
@@ -333,7 +327,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // --- Datas Reais (Apenas em edição/leitura) ---
                       if (isEditing) ...[
                         Text(
                           'Datas e Estado Reais',
@@ -366,9 +359,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  // --- WIDGETS AUXILIARES ---
-
-  // Helper para campos de texto genéricos
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -393,7 +383,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  // Helper para criar dropdown de Tipo de Tarefa
   Widget _buildTaskTypeDropdown(
     List<dynamic> taskTypes,
     int? currentValue,
@@ -437,7 +426,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  // Helper para criar dropdown de Programador
   Widget _buildDeveloperDropdown(
     List<AppUser> developers,
     int? currentValue,
@@ -475,7 +463,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  // Helper para campos de Data (Planeada)
   Widget _buildDatePicker(
     String label,
     DateTime? date,
@@ -499,7 +486,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  // Helper para campos de Dados Reais (read-only)
   Widget _buildReadOnlyField(String label, String value) {
     return GlassCard(
       child: ListTile(

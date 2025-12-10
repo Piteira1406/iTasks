@@ -1,4 +1,3 @@
-// Modern Custom Text Field with animations and states
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:itasks/core/theme/app_colors.dart';

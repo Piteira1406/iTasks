@@ -42,11 +42,6 @@ class Task {
   factory Task.fromFirestore(DocumentSnapshot doc) {
     final map = doc.data() as Map<String, dynamic>;
 
-    // Helper para converter Timestamp para DateTime (e lidar com nulos)
-    DateTime? timestampToDateTime(Timestamp? timestamp) {
-      return timestamp?.toDate();
-    }
-
     return Task(
       id: doc.id, // O ID vem do documento, não do 'map'
       description: map['description'] ?? '',

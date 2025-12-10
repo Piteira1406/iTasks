@@ -1,14 +1,11 @@
-// Implementação Mobile/Desktop do CSV Service
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:itasks/core/services/logger_service.dart';
 
-/// Download de arquivo no Mobile/Desktop
 Future<void> downloadFile(String content, String filename) async {
   try {
-    // 1. Solicitar permissões no Android
     if (Platform.isAndroid) {
       final granted = await _requestPermissions();
       if (!granted) {
@@ -16,19 +13,15 @@ Future<void> downloadFile(String content, String filename) async {
       }
     }
 
-    // 2. Obter diretório apropriado
     Directory? directory;
 
     if (Platform.isAndroid) {
-      // Android: Tentar salvar em Downloads
       directory = Directory('/storage/emulated/0/Download');
       
       if (!await directory.exists()) {
-        // Fallback para external storage
         directory = await getExternalStorageDirectory();
       }
     } else if (Platform.isIOS) {
-      // iOS: Salvar em Documents
       directory = await getApplicationDocumentsDirectory();
     } else {
       // Desktop: Tentar Downloads, senão Documents
@@ -59,10 +52,8 @@ Future<void> downloadFile(String content, String filename) async {
   }
 }
 
-/// Solicita permissões de armazenamento
 Future<bool> _requestPermissions() async {
   try {
-    // Android 13+ (API 33+) usa permissões diferentes
     if (await Permission.photos.request().isGranted ||
         await Permission.videos.request().isGranted) {
       return true;
