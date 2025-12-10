@@ -31,15 +31,17 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final secondaryAuth = FirebaseAuth.instanceFor(app: _auth.app);
-      final credential = await secondaryAuth.createUserWithEmailAndPassword(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-      await secondaryAuth.signOut();
+      print('✅ Utilizador criado: ${credential.user?.email}');
       return credential;
     } on FirebaseAuthException catch (e) {
-      print(e.message);
+      print('❌ FirebaseAuthException: ${e.code} - ${e.message}');
+      return null;
+    } catch (e) {
+      print('❌ Erro genérico: $e');
       return null;
     }
   }

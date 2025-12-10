@@ -82,6 +82,7 @@ class UserManagementProvider with ChangeNotifier {
     late UserCredential userCredential;
 
     try {
+      print('🔄 Criando utilizador em Firebase Auth...');
       final credential = await _authService.createUserInAuth(
         email: email,
         password: password,
@@ -90,9 +91,11 @@ class UserManagementProvider with ChangeNotifier {
       if (credential == null || credential.user == null) {
         _isLoading = false;
         notifyListeners();
+        print('❌ Credential null ou user null');
         return "Erro desconhecido ao criar utilizador.";
       }
       userCredential = credential;
+      print('✅ UserCredential obtido: ${userCredential.user?.email}');
     } on FirebaseAuthException catch (e) {
       _isLoading = false;
       notifyListeners();

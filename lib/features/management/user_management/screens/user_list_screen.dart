@@ -347,7 +347,7 @@ class _UserListScreenState extends State<UserListScreen> {
         isHoverable: true,
         onTap: () => _navigateToEditScreen(context, user: user),
         child: Padding(
-          padding: EdgeInsets.all(AppSpacing.md),
+          padding: EdgeInsets.all(AppSpacing.sm),
           child: Row(
             children: [
               // Avatar
@@ -382,11 +382,11 @@ class _UserListScreenState extends State<UserListScreen> {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       user.name,
-                      style: AppTypography.bodyLarge.copyWith(
+                      style: AppTypography.bodyMedium.copyWith(
                         color: isDark
                             ? AppColors.darkTextPrimary
                             : AppColors.lightTextPrimary,
@@ -395,7 +395,6 @@ class _UserListScreenState extends State<UserListScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 2),
                     Row(
                       children: [
                         Icon(
@@ -419,11 +418,10 @@ class _UserListScreenState extends State<UserListScreen> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 4),
                     Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: AppSpacing.sm,
-                        vertical: 2,
+                        vertical: 1,
                       ),
                       decoration: BoxDecoration(
                         color: typeColor.withValues(alpha: 0.15),
@@ -456,7 +454,7 @@ class _UserListScreenState extends State<UserListScreen> {
               ),
               
               // Actions
-              Column(
+              Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(

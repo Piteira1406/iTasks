@@ -9,6 +9,7 @@ import 'package:itasks/core/models/app_user_model.dart';
 import 'package:itasks/core/models/manager_model.dart';
 import 'package:itasks/core/models/developer_model.dart';
 import 'package:itasks/core/services/firestore_service.dart';
+import 'package:itasks/core/services/auth_service.dart';
 import 'package:itasks/features/management/user_management/providers/user_management_provider.dart';
 
 // Constantes baseadas no enunciado
@@ -208,7 +209,6 @@ class _UserEditScreenState extends State<UserEditScreen> {
           );
         }
 
-        // Call Provider to save
         final String? error = await userManagementProvider.createNewUser(
           email: _usernameController.text.trim(),
           password: _passwordController.text,
@@ -218,15 +218,17 @@ class _UserEditScreenState extends State<UserEditScreen> {
         );
 
         if (error != null) {
-          // Show error message
           if (mounted) {
             CustomSnackBar.showError(context, error);
           }
         } else {
-          // Success
           if (mounted) {
-            CustomSnackBar.showSuccess(context, 'Utilizador criado com sucesso!');
-            Navigator.of(context).pop();
+            CustomSnackBar.showSuccess(context, 'Utilizador criado! A fazer logout...');
+            await Future.delayed(const Duration(seconds: 1));
+            await context.read<AuthService>().signOut();
+            if (mounted) {
+              Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+            }
           }
         }
       }
