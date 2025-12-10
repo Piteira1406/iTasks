@@ -3,9 +3,61 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Esta regra diz: "Qualquer pessoa com Login feito pode ler e escrever tudo"
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    } 
+    // Função auxiliar para verificar se o usuário é Manager
+    function isManager() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/managers/$(request.auth.uid));
+    }
+    
+    // Função auxiliar para verificar se o usuário é Developer
+    function isDeveloper() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/developers/$(request.auth.uid));
+    }
+    
+    // Função para verificar se o usuário é autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Collection: appUsers - Todos podem ler, apenas Manager pode criar/editar
+    match /appUsers/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isManager();
+    }
+    
+    // Collection: managers - Todos autenticados podem ler, apenas Manager pode criar/editar
+    match /managers/{managerId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isManager();
+    }
+    
+    // Collection: developers - Todos autenticados podem ler, apenas Manager pode criar/editar
+    match /developers/{developerId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isManager();
+    }
+    
+    // Collection: tasks - Developers podem ler e atualizar apenas suas tarefas
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow create, delete: if isManager();
+      allow update: if isManager() || 
+                      (isDeveloper() && 
+                       resource.data.idDeveloper == get(/databases/$(database)/documents/developers/$(request.auth.uid)).data.idDeveloper &&
+                       // Developer só pode alterar taskStatus e datas
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['taskStatus', 'realStartDate', 'realEndDate']));
+    }
+    
+    // Collection: taskTypes - Todos podem ler, apenas Manager pode criar/editar
+    match /taskTypes/{typeId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isManager();
+    }
+    
+    // Collection: counters - Apenas Manager pode ler/escrever
+    match /counters/{counterId} {
+      allow read, write: if isManager();
+    }
   }
 }
